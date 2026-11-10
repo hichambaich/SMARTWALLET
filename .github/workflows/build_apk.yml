@@ -28,12 +28,17 @@ jobs:
       - name: Create Android files
         run: flutter create --project-name transparency_go . --platforms android
 
-      # تعديل Gradle فقط لتجنب مشاكل الإصدار
-      - name: Force correct Gradle version
+      - name: Force Gradle & Kotlin versions
         run: |
+          # تحديث Gradle إلى 8.7
           sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties
+          
+          # تحديث إصدار Kotlin إلى 2.0.21
+          sed -i "s/ext.kotlin_version = .*/ext.kotlin_version = '2.0.21'/" android/build.gradle
+          
+          # تحديث إصدار Kotlin في settings.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "2.0.21"/' android/settings.gradle
 
-      # إضافة صلاحية الإنترنت فقط، دون المساس بـ namespace أو applicationId
       - name: Fix Android Manifest Permissions
         run: |
           python -c "
@@ -55,7 +60,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # بناء نسخة Debug لكشف الأخطاء
+      - name: Clean Build
+        run: flutter clean
+
       - name: Build Debug APK
         run: flutter build apk --debug
 
