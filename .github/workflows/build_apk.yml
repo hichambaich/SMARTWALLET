@@ -28,33 +28,12 @@ jobs:
       - name: Create Android files
         run: flutter create --project-name transparency_go . --platforms android
 
-      - name: Force correct Gradle, AGP, and Kotlin versions
+      # تعديل Gradle فقط لتجنب مشاكل الإصدار
+      - name: Force correct Gradle version
         run: |
           sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties
-          cat > android/settings.gradle << 'INNEREOF'
-          pluginManagement {
-              def flutterSdkPath = {
-                  def properties = new Properties()
-                  file("local.properties").withInputStream { properties.load(it) }
-                  def flutterSdkPath = properties.getProperty("flutter.sdk")
-                  assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
-                  return flutterSdkPath
-              }()
-              includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-          plugins {
-              id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-              id "com.android.application" version "8.5.0" apply false
-              id "org.jetbrains.kotlin.android" version "2.0.10" apply false
-          }
-          include ":app"
-          INNEREOF
 
+      # إضافة صلاحية الإنترنت فقط، دون المساس بـ namespace أو applicationId
       - name: Fix Android Manifest Permissions
         run: |
           python -c "
@@ -73,48 +52,15 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="SMARTWALLET"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Install Pillow
-        run: pip install Pillow
-
-      - name: Generate Android Launcher Icons
-        run: |
-          python3 << 'INNEREOF'
-          from PIL import Image
-          import os
-          ICON_SRC = 'web/icons/Icon-512.png'
-          ANDROID_RES = 'android/app/src/main/res'
-          densities = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
-          src = Image.open(ICON_SRC).convert('RGBA')
-          for density, size in densities.items():
-              d = os.path.join(ANDROID_RES, f'mipmap-{density}')
-              os.makedirs(d, exist_ok=True)
-              src.resize((size, size), Image.LANCZOS).save(os.path.join(d, 'ic_launcher.png'))
-          print('DONE: icons generated')
-          INNEREOF
-
-      - name: Bump Version Code
-        run: |
-          sed -i "s/^version: .*/version: 1.0.${GITHUB_RUN_NUMBER}+${GITHUB_RUN_NUMBER}/" pubspec.yaml
-
-      # سنقوم بتجاوز خطوة التوقيع المعقدة
-      - name: Configure Android Signing (Bypass)
-        run: |
-          sed -i 's/signingConfig = signingConfigs.release/signingConfig = signingConfigs.debug/' android/app/build.gradle || true
-
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Clean Build
-        run: flutter clean
+      # بناء نسخة Debug لكشف الأخطاء
+      - name: Build Debug APK
+        run: flutter build apk --debug
 
-      - name: Build Release APK
-        run: flutter build apk --release --split-per-abi
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: "v1.0.${{ github.run_number }}"
-          name: "Flutter Build ${{ github.run_number }}"
-          files: build/app/outputs/flutter-apk/*.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: SMARTWALLET-DEBUG
+          path: build/app/outputs/flutter-apk/app-debug.apk
