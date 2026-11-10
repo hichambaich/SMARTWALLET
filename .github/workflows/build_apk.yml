@@ -16,42 +16,49 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter 3.24
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
           channel: 'stable'
 
       - name: Create Android folder
         run: flutter create --project-name transparency_go --platforms android .
 
-      - name: Force Compatible Toolchain Versions
+      # إجبار إصدارات متوافقة مع Flutter 3.24 ومكتبات المشروع
+      - name: Force Compatible Versions
         run: |
-          # إجبار Gradle على الإصدار 8.7
           sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties
-          
-          # إجبار Kotlin على الإصدار 2.0.10
-          sed -i "s/ext.kotlin_version = .*/ext.kotlin_version = '2.0.10'/" android/build.gradle
-          
-          # إجبار AGP على الإصدار 8.5.0
-          sed -i 's/id "com.android.application" version ".*"/id "com.android.application" version "8.5.0"/' android/settings.gradle
+          sed -i 's/id "com.android.application" version ".*"/id "com.android.application" version "8.5.0" apply false/' android/settings.gradle
+          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "2.0.10" apply false/' android/settings.gradle
 
       - name: Fix Manifest (Permissions & Exported)
         run: |
           python3 -c "
           path = 'android/app/src/main/AndroidManifest.xml'
           with open(path, 'r') as f: c = f.read()
-          # إضافة صلاحية الإنترنت
           if 'android.permission.INTERNET' not in c:
               c = c.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\" />\n    <application')
-          # السماح بالاتصال غير المشفر (مهم لـ Tailscale)
           if 'usesCleartextTraffic' not in c:
               c = c.replace('<application', '<application android:usesCleartextTraffic=\"true\"')
-          # منع الانهيار في أندرويد 12+
           if 'exported=' not in c and '<activity' in c:
               c = c.replace('<activity', '<activity android:exported=\"true\"')
-          # تسمية التطبيق
           c = c.replace('android:label=\"transparency_go\"', 'android:label=\"SMARTWALLET\"')
+          with open(path, 'w') as f: f.write(c)
+          "
+
+      - name: Fix build.gradle (SDK & Multidex)
+        run: |
+          python3 -c "
+          import re
+          path = 'android/app/build.gradle'
+          with open(path, 'r') as f: c = f.read()
+          # فرض SDK 34
+          c = re.sub(r'compileSdk\s*=\s*flutter.compileSdkVersion', 'compileSdk = 34', c)
+          c = re.sub(r'targetSdk\s*=\s*flutter.targetSdkVersion', 'targetSdk = 34', c)
+          c = re.sub(r'minSdk\s*=\s*flutter.minSdkVersion', 'minSdk = 23', c)
+          # تفعيل multiDex
+          if 'multiDexEnabled' not in c:
+              c = c.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled true')
           with open(path, 'w') as f: f.write(c)
           "
 
@@ -72,8 +79,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # البناء مع تفعيل verbose لكشف أي خطأ
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
