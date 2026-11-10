@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "800283166224",
+    "project_id": "smartwallet-app1",
+    "storage_bucket": "smartwallet-app1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800283166224:android:176d0015187f4dc8e06c95",
+        "android_client_info": {
+          "package_name": "com.smartwallet.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0Oh6GVQbgxORDt5uV77LWq8i50PkCxXk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -22,7 +22,7 @@ jobs:
           channel: 'stable'
 
       - name: Create Android folder
-        run: flutter create --project-name transparency_go --platforms android .
+        run: flutter create --org com.smartwallet --project-name app --platforms android .
 
       # إجبار إصدارات متوافقة مع Flutter 3.24 ومكتبات المشروع
       - name: Force Compatible Versions

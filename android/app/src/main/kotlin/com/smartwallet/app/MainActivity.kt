@@ -1,4 +1,4 @@
-package com.example.transparency_go
+package com.smartwallet.app
 
 import io.flutter.embedding.android.FlutterActivity
 
