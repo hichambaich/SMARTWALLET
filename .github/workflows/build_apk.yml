@@ -16,9 +16,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Flutter
+      - name: Set up Flutter 3.24
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.0'
           channel: 'stable'
 
       - name: Create Android folder
@@ -29,28 +30,41 @@ jobs:
           # نسخ ملف إعدادات Firebase
           cp google-services.json android/app/
           
-          # تعديل ملفات Gradle باستخدام Python لضمان الدقة
+          # استخدام Python لتعديل ملفات Gradle بشكل آمن جداً ومطابق للتوثيق
           python3 -c "
-          # settings.gradle
+          import re
+          
+          # 1. إضافة الإضافة إلى settings.gradle
           p = 'android/settings.gradle'
           with open(p, 'r') as f: c = f.read()
           if 'com.google.gms.google-services' not in c:
-              c = c.replace('id \"dev.flutter.flutter-plugin-loader\"', 'id \"com.google.gms.google-services\" version \"4.4.1\" apply false\n        id \"dev.flutter.flutter-plugin-loader\"')
+              c = c.replace('id \"dev.flutter.flutter-plugin-loader\" version \"1.0.0\"', 
+                            'id \"dev.flutter.flutter-plugin-loader\" version \"1.0.0\"\n        id \"com.google.gms.google-services\" version \"4.4.1\" apply false')
               with open(p, 'w') as f: f.write(c)
 
-          # app/build.gradle
+          # 2. إضافة الإضافة إلى app/build.gradle
           p2 = 'android/app/build.gradle'
           with open(p2, 'r') as f: c2 = f.read()
           if 'com.google.gms.google-services' not in c2:
-              c2 = c2.replace('id \"dev.flutter.flutter-gradle-plugin\"', 'id \"com.google.gms.google-services\"\n    id \"dev.flutter.flutter-gradle-plugin\"')
+              c2 = c2.replace('id \"dev.flutter.flutter-gradle-plugin\"', 
+                              'id \"dev.flutter.flutter-gradle-plugin\"\n    id \"com.google.gms.google-services\"')
               with open(p2, 'w') as f: f.write(c2)
           "
 
-      - name: Force Compatible Toolchain Versions
+      - name: Set SDK Versions and Multidex
         run: |
-          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties
-          sed -i 's/id "com.android.application" version ".*"/id "com.android.application" version "8.5.0" apply false/' android/settings.gradle
-          sed -i 's/id "org.jetbrains.kotlin.android" version ".*"/id "org.jetbrains.kotlin.android" version "2.0.10" apply false/' android/settings.gradle
+          python3 -c "
+          import re
+          path = 'android/app/build.gradle'
+          with open(path, 'r') as f: c = f.read()
+          # Firebase يحتاج على الأقل SDK 23
+          c = re.sub(r'compileSdk\s*=\s*flutter.compileSdkVersion', 'compileSdk = 34', c)
+          c = re.sub(r'targetSdk\s*=\s*flutter.targetSdkVersion', 'targetSdk = 34', c)
+          c = re.sub(r'minSdk\s*=\s*flutter.minSdkVersion', 'minSdk = 23', c)
+          if 'multiDexEnabled' not in c:
+              c = c.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled true')
+          with open(path, 'w') as f: f.write(c)
+          "
 
       - name: Fix Manifest (Permissions & Exported)
         run: |
