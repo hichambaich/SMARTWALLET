@@ -1,41 +1,32 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class FirebaseService {
   static Future<void> initialize() async {
     await Firebase.initializeApp();
 
     FirebaseMessaging messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
 
-    NotificationSettings settings = await messaging.requestPermission(
-      alert: true, badge: true, sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      String? token = await messaging.getToken();
-      
-      if (token != null) {
-        try {
-          final response = await http.post(
-            Uri.parse('http://100.77.27.80:8553/api/update_fcm_token'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'user_id': 556, // تثبيت رقم حسابك للتجربة
-              'fcm_token': token
-            }),
-          );
-          
-          // عرض النتيجة على الشاشة
-          _showDialog("نجاح! ✅", "تم إرسال التوكن للسيرفر.\nالرد: ${response.body}");
-          
-        } catch (e) {
-          // عرض الخطأ على الشاشة
-          _showDialog("خطأ في الاتصال! ❌", "لم يتم إرسال التوكن.\nالسبب: $e");
-        }
+    String? token = await messaging.getToken();
+    
+    if (token != null) {
+      try {
+        // استخدام الـ IP المباشر
+        final response = await http.post(
+          Uri.parse('http://100.77.27.80:8553/api/update_fcm_token'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'user_id': 556, 'fcm_token': token}),
+        );
+        
+        _showDialog("نجاح! ✅", "تم إرسال التوكن.\nالرد: ${response.body}");
+      } catch (e) {
+        _showDialog("خطأ في الاتصال! ❌", "السبب: $e");
       }
     }
   }
@@ -56,6 +47,3 @@ class FirebaseService {
     });
   }
 }
-
-// مفتاح التنقل لعرض النافذة
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
