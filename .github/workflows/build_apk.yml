@@ -25,16 +25,14 @@ jobs:
       - name: Create Android folder
         run: flutter create --org com.smartwallet --project-name app --platforms android .
 
-      - name: Setup Firebase & Inject Plugins
+      - name: Setup Firebase & Force Compatible Versions
         run: |
-          # نسخ ملف إعدادات Firebase
           cp google-services.json android/app/
           
-          # استخدام Python لتعديل ملفات Gradle بشكل آمن جداً ومطابق للتوثيق
           python3 -c "
           import re
           
-          # 1. إضافة الإضافة إلى settings.gradle
+          # 1. إضافة إضافة Firebase إلى settings.gradle
           p = 'android/settings.gradle'
           with open(p, 'r') as f: c = f.read()
           if 'com.google.gms.google-services' not in c:
@@ -42,7 +40,7 @@ jobs:
                             'id \"dev.flutter.flutter-plugin-loader\" version \"1.0.0\"\n        id \"com.google.gms.google-services\" version \"4.4.1\" apply false')
               with open(p, 'w') as f: f.write(c)
 
-          # 2. إضافة الإضافة إلى app/build.gradle
+          # 2. إضافة إضافة Firebase إلى app/build.gradle
           p2 = 'android/app/build.gradle'
           with open(p2, 'r') as f: c2 = f.read()
           if 'com.google.gms.google-services' not in c2:
@@ -51,34 +49,47 @@ jobs:
               with open(p2, 'w') as f: f.write(c2)
           "
 
-      - name: Set SDK Versions and Multidex
+      - name: Force Gradle, AGP, Kotlin, and SDK Versions
         run: |
           python3 -c "
           import re
-          path = 'android/app/build.gradle'
-          with open(path, 'r') as f: c = f.read()
-          # Firebase يحتاج على الأقل SDK 23
-          c = re.sub(r'compileSdk\s*=\s*flutter.compileSdkVersion', 'compileSdk = 34', c)
-          c = re.sub(r'targetSdk\s*=\s*flutter.targetSdkVersion', 'targetSdk = 34', c)
-          c = re.sub(r'minSdk\s*=\s*flutter.minSdkVersion', 'minSdk = 23', c)
-          if 'multiDexEnabled' not in c:
-              c = c.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled true')
-          with open(path, 'w') as f: f.write(c)
+          
+          p = 'android/gradle/wrapper/gradle-wrapper.properties'
+          with open(p, 'r') as f: c = f.read()
+          c = re.sub(r'distributionUrl=.*', 'distributionUrl=https\\\\://services.gradle.org/distributions/gradle-8.7-bin.zip', c)
+          with open(p, 'w') as f: f.write(c)
+
+          p2 = 'android/settings.gradle'
+          with open(p2, 'r') as f: c2 = f.read()
+          c2 = re.sub(r'id \"com.android.application\" version \".*\"', 'id \"com.android.application\" version \"8.5.0\" apply false', c2)
+          c2 = re.sub(r'id \"org.jetbrains.kotlin.android\" version \".*\"', 'id \"org.jetbrains.kotlin.android\" version \"2.0.10\" apply false', c2)
+          with open(p2, 'w') as f: f.write(c2)
+
+          p3 = 'android/app/build.gradle'
+          with open(p3, 'r') as f: c3 = f.read()
+          c3 = re.sub(r'compileSdk\s*=\s*flutter.compileSdkVersion', 'compileSdk = 34', c3)
+          c3 = re.sub(r'targetSdk\s*=\s*flutter.targetSdkVersion', 'targetSdk = 34', c3)
+          c3 = re.sub(r'minSdk\s*=\s*flutter.minSdkVersion', 'minSdk = 23', c3)
+          with open(p3, 'w') as f: f.write(c3)
           "
 
-      - name: Fix Manifest (Permissions & Exported)
+      - name: Fix Android Manifest (Permissions & Exported)
         run: |
           python3 -c "
           path = 'android/app/src/main/AndroidManifest.xml'
           with open(path, 'r') as f: c = f.read()
+          
           if 'android.permission.INTERNET' not in c:
               c = c.replace('<application', '<uses-permission android:name=\"android.permission.INTERNET\" />\n    <application')
+          
+          if 'android.permission.POST_NOTIFICATIONS' not in c:
+              c = c.replace('<application', '<uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\" />\n    <application')
+              
           if 'usesCleartextTraffic' not in c:
               c = c.replace('<application', '<application android:usesCleartextTraffic=\"true\"')
           if 'exported=' not in c and '<activity' in c:
               c = c.replace('<activity', '<activity android:exported=\"true\"')
           c = c.replace('android:label=\"app\"', 'android:label=\"SMARTWALLET\"')
-          c = c.replace('android:label=\"transparency_go\"', 'android:label=\"SMARTWALLET\"')
           with open(path, 'w') as f: f.write(c)
           "
 
@@ -98,6 +109,9 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Clean Build
+        run: flutter clean
 
       - name: Build Release APK
         run: flutter build apk --release
