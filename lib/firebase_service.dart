@@ -17,33 +17,15 @@ class FirebaseService {
     
     if (token != null) {
       try {
-        // استخدام الـ IP المباشر
-        final response = await http.post(
+        // إرسال التوكن في الخلفية بصمت
+        await http.post(
           Uri.parse('http://100.77.27.80:8553/api/update_fcm_token'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'user_id': 556, 'fcm_token': token}),
         );
-        
-        _showDialog("نجاح! ✅", "تم إرسال التوكن.\nالرد: ${response.body}");
       } catch (e) {
-        _showDialog("خطأ في الاتصال! ❌", "السبب: $e");
+        debugPrint("Error sending token: $e");
       }
     }
-  }
-
-  static void _showDialog(String title, String content) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(title),
-            content: Text(content),
-            actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text("حسناً"))],
-          ),
-        );
-      }
-    });
   }
 }
