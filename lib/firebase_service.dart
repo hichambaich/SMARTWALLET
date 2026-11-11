@@ -21,7 +21,7 @@ class FirebaseService {
       if (token != null) {
         try {
           final response = await http.post(
-            Uri.parse('http://100.77.27.80:8553/api/update_fcm_token'),
+            Uri.parse('http://:8553/api/update_fcm_token'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'user_id': 556, // تثبيت رقم حسابك للتجربة
