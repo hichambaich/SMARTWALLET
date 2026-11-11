@@ -116,6 +116,7 @@ class MyApp extends StatelessWidget {
           valueListenable: themeNotifier,
           builder: (context, currentMode, child) {
             return MaterialApp(
+      navigatorKey: navigatorKey,
               key: ValueKey(currentLang),
               locale: Locale(currentLang),
               localizationsDelegates: const [
