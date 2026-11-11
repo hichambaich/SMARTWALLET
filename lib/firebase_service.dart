@@ -1,15 +1,15 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class FirebaseService {
   static Future<void> initialize() async {
-    // تهيئة Firebase
     await Firebase.initializeApp();
 
     FirebaseMessaging messaging = FirebaseMessaging.instance;
 
-    // طلب إذن الإشعارات (ضروري جداً لأندرويد 13+)
     NotificationSettings settings = await messaging.requestPermission(
       alert: true,
       announcement: false,
@@ -21,17 +21,29 @@ class FirebaseService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      // الحصول على الـ Token الخاص بالهاتف
       String? token = await messaging.getToken();
-      debugPrint(' FCM Token: $token'); 
+      debugPrint(' FCM Token: $token');
       
-      // �ملاحظة: لاحقاً سنقوم بإرسال هذا الـ Token إلى الباك إند (Python) لحفظه
+      if (token != null) {
+        // �إرسال التوكن للسيرفر
+        try {
+          final response = await http.post(
+            Uri.parse('https://2.tail7f4de4.ts.net:8443/api/update_fcm_token'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'user_id': 1, // سيتم ربطه بمعرف المستخدم لاحقاً
+              'fcm_token': token
+            }),
+          );
+          debugPrint('✅ Server response: ${response.statusCode}');
+        } catch (e) {
+          debugPrint('❌ Error sending token to server: $e');
+        }
+      }
     }
 
-    // الاستماع للإشعارات أثناء فتح التطبيق
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Got a message whilst in the foreground!');
-      debugPrint('Message data: ${message.data}');
       if (message.notification != null) {
         debugPrint('Message also contained a notification: ${message.notification}');
       }
