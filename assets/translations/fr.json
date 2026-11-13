@@ -365,7 +365,8 @@
     "maximum": "Maximum",
     "status": "Statut",
     "pnl_short": "PNL",
-    "profit": "Profit"
+    "profit": "Profit",
+    "score": "Score"
   },
   "page": {
     "active_universe": "Univers actif",
@@ -443,7 +444,8 @@
     "closed": "Fermé",
     "duration": "Durée",
     "dca_executions": "Exécutions DCA",
-    "lifecycle": "Cycle de vie"
+    "lifecycle": "Cycle de vie",
+    "admitted": "Admis le"
   },
   "perf": {
     "today": "Aujourd'hui",
@@ -714,8 +716,8 @@
     "assets_tracked": "actifs suivis"
   },
   "status": {
-    "suspended": "SUSPENDED",
-    "active": "ACTIVE",
+    "suspended": "Suspendu",
+    "active": "Actif",
     "deteriorating": "DETERIORATING",
     "running": "RUNNING"
   },
@@ -778,17 +780,17 @@
     "submitted": "Demande de paiement soumise. En attente de validation admin."
   },
   "permanent": {
-    "menu_title": "Actifs Permanents",
-    "menu_sub": "Votre liste personnelle",
-    "title": "Actifs Permanents",
+    "menu_title": "Actifs Favoris",
+    "menu_sub": "Votre liste personnelle de favoris",
+    "title": "Actifs Favoris",
     "add_asset": "Ajouter un actif",
     "symbol": "Symbole",
     "symbol_hint": "BTC (ou BTC/USDT)",
     "reason": "Raison",
     "reason_hint": "Pourquoi ajouter cet actif ?",
-    "add_button": "Ajouter à la liste permanente",
-    "your_assets": "Vos actifs permanents",
-    "no_assets": "Aucun actif permanent pour l'instant",
+    "add_button": "Ajouter à la liste des favoris",
+    "your_assets": "Vos actifs favoris",
+    "no_assets": "Aucun actif favori pour l'instant",
     "added_by": "Ajouté par",
     "reason_label": "Raison",
     "recently_removed": "Récemment retirés",
@@ -798,9 +800,10 @@
     "remove_reason_hint": "ex: trop volatil",
     "symbol_reason_required": "Symbole et raison requis",
     "symbol_format_error": "Le symbole doit être comme BTC/USDT",
-    "added_success": "ajouté à votre liste permanente",
+    "added_success": "ajouté à votre liste de favoris",
     "removed_success": "retiré",
-    "connection_error": "Erreur de connexion"
+    "connection_error": "Erreur de connexion",
+    "admin_role": "Administrateur"
   },
   "global": {
     "title": "Nominations Globales",
@@ -820,5 +823,35 @@
   },
   "journal": {
     "empty": "Le journal est vide"
+  },
+  "telegram.command_hint": "Envoyez cette commande au bot pour recevoir des alertes :",
+  "telegram.copy_command": "Commande copiée avec succès !",
+  "unit": {
+    "days": "jours",
+    "minutes": "min"
+  },
+  "liquidity": {
+    "stable": "Stable",
+    "up": "Hausse",
+    "down": "Baisse",
+    "improving": "En amélioration",
+    "deteriorating": "En détérioration"
+  },
+  "lifecycle": {
+    "adoption": "Adoption",
+    "adoption_add": "Ajout Adoption",
+    "buy": "Achat",
+    "sell": "Vente",
+    "dca": "DCA"
+  },
+  "chat": {
+    "title": "Chat de support",
+    "no_messages": "Aucun message.",
+    "type_message": "Tapez votre message...",
+    "support_button": "Support",
+    "live_chat_desc": "Discutez directement avec notre équipe de support.",
+    "start_chat": "Démarrer le chat",
+    "admin_inbox_sub": "Lire et répondre aux messages",
+    "inbox": "Boîte de réception"
   }
 }

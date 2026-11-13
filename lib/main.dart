@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,8 @@ import 'launcher/open_url_stub.dart'
     if (dart.library.io) 'launcher/open_url_io.dart'
     if (dart.library.html) 'launcher/open_url_web.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'chat_screen.dart';
+import 'admin_chat_screen.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -15,10 +18,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FirebaseService.initialize();
-  WidgetsFlutterBinding.ensureInitialized();
   try {
-    await Firebase.initializeApp();
+    // تهيئة Firebase للأندرويد فقط لتجنب الشاشة البيضاء في الويب
+    if (!kIsWeb) {
+      await Firebase.initializeApp();
+      // نستدعي دالة FCM بعد تهيئة Firebase (لكنها تحتاج SharedPreferences، لذا سننقلها لاحقاً)
+    }
+    
     await AppTranslations.load();
     final prefs = await SharedPreferences.getInstance();
     languageNotifier.value = prefs.getString('app_language') ?? 'en';
@@ -104,6 +110,83 @@ class AppTranslations {
 }
 
 
+String translateLiquidity(dynamic trend) {
+  if (trend == null) return "";
+  switch (trend.toString().toUpperCase()) {
+    case 'STABLE': return AppTranslations.t('liquidity.stable');
+    case 'UP': return AppTranslations.t('liquidity.up');
+    case 'DOWN': return AppTranslations.t('liquidity.down');
+    case 'IMPROVING': return AppTranslations.t('liquidity.improving');
+    case 'DETERIORATING': return AppTranslations.t('liquidity.deteriorating');
+    default: return trend.toString();
+  }
+}
+
+
+
+String formatDuration(double minutes) {
+  if (minutes <= 0) return "0m";
+  int totalMins = minutes.round();
+  int days = totalMins ~/ 1440;
+  int hours = (totalMins % 1440) ~/ 60;
+  int mins = totalMins % 60;
+  List<String> parts = [];
+  if (days > 0) parts.add("${days}d");
+  if (hours > 0) parts.add("${hours}h");
+  if (mins > 0 || parts.isEmpty) parts.add("${mins}m");
+  return parts.join(" ");
+}
+
+String translateStatus(dynamic status) {
+  if (status == null) return "";
+  final s = status.toString().toUpperCase();
+  if (s == 'ACTIVE') return AppTranslations.t('status.active');
+  if (s == 'SUSPENDED') return AppTranslations.t('status.suspended');
+  return status.toString();
+}
+
+String translateLifecycle(String action) {
+  final act = action.toUpperCase();
+  if (act.contains('ADOPTION_ADD')) return AppTranslations.t('lifecycle.adoption_add');
+  if (act.contains('ADOPTION')) return AppTranslations.t('lifecycle.adoption');
+  if (act.contains('BUY')) return AppTranslations.t('lifecycle.buy');
+  if (act.contains('SELL')) return AppTranslations.t('lifecycle.sell');
+  if (act.contains('DCA')) return AppTranslations.t('lifecycle.dca');
+  return action;
+}
+
+
+  Future<void> _setupFCM() async {
+    try {
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      
+      // طلب الإذن
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true, badge: true, sound: true,
+      );
+      
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // الحصول على التوكن
+        String? token = await messaging.getToken();
+        if (token != null) {
+          debugPrint("FCM Token: $token");
+          // إرسال التوكن للسيرفر
+          final prefs = await SharedPreferences.getInstance();
+          final authToken = prefs.getString('auth_token') ?? '';
+          if (authToken.isNotEmpty) {
+            await http.post(
+              Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
+              headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
+              body: jsonEncode({'fcm_token': token}),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("FCM Error: $e");
+    }
+  }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -166,7 +249,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 // ============================================================
 // TODO: Known i18n limitations (documented, not silently ignored)
@@ -464,10 +546,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _setupFCM();
     _fetchData();
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) => _fetchData(isPolling: true));
   }
-
 
 
   
@@ -626,7 +708,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final profitTrades = stats['profit_trades'] ?? 0;
     final winRate = (stats['win_rate'] ?? 0.0).toDouble();
     final realizedPnl = (stats['realized_pnl'] ?? 0.0).toDouble();
-    final realizedPnlPct = (stats['realized_pnl_pct'] ?? 0.0).toDouble();
+    final realizedPnlPct = (stats['realized_pnl_pct'] ?? stats['net_pnl_pct'] ?? stats['pnl_pct'] ?? 0.0).toDouble();
     final exposurePct = (risk['exposure_pct'] ?? 0.0).toDouble();
     // حساب المجموع مباشرة من قائمة المراكز (مطابقة لـ Flet)
     final posValue = positions.fold(0.0, (sum, p) => sum + (double.tryParse(p['value']?.toString() ?? '0') ?? 0.0));
@@ -1150,7 +1232,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   List<Widget> _buildChartLabels() {
     List<Widget> items = [];
     for (int i = 0; i < _chartLabels.length; i++) {
@@ -1256,7 +1337,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-
   Widget _buildInnerCard(String title, String value, IconData? icon, Color iconColor, String? subtitle, String bnbLogoUrl, {bool isBnbIcon = false, VoidCallback? onTap, Color? titleColor, Color? valueColor, Widget? customTitle}) {
       return InkWell(
         onTap: onTap,
@@ -1347,7 +1427,6 @@ class _ExpandablePositionCardState extends State<ExpandablePositionCard> {
     if (price >= 0.01) return '\$${price.toStringAsFixed(4)}';
     return '\$${price.toStringAsFixed(6)}';
   }
-
 
   final List<Map<String, double>> _dcaProtocol = [
     {"tp": 0.60},
@@ -2314,7 +2393,7 @@ class _StatDetailScreenState extends State<StatDetailScreen> {
             child: Column(
               children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('${_selectedPeriod.toUpperCase()} ${AppTranslations.t('misc.breakdown_label')}', style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text('${AppTranslations.t('misc.period_${_selectedPeriod.toLowerCase()}')} ${AppTranslations.t('misc.breakdown_label')}', style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 14)),
                   Text(textDirection: TextDirection.ltr, '+\$${totalProfit.toStringAsFixed(2)}', style: TextStyle(color: green, fontWeight: FontWeight.bold, fontSize: 13)),
                 ]),
                 Divider(color: (themeNotifier.value == ThemeMode.dark ? const Color(0xFF202d42) : const Color(0xFFe2e8f0)), height: 20),
@@ -3157,8 +3236,11 @@ class TradeDetailScreen extends StatelessWidget {
     final dcaSteps = trade['dca_steps'] ?? 0;
     final lifecycle = trade['lifecycle'] as List? ?? [];
     
-    final netPnlPct = (trade['realized_profit_pct'] ?? 0.0);
-    final grossPnlPct = (trade['gross_profit_pct'] ?? 0.0);
+    final netPnlPct = (trade['net_pnl_pct'] ?? trade['realized_profit_pct'] ?? 0.0);
+    final double rawProfit = double.tryParse(trade['raw_profit_usdt']?.toString() ?? '0') ?? 0.0;
+    final double lcCost = double.tryParse(trade['lifecycle_cost']?.toString() ?? '0') ?? 0.0;
+    final double fallbackGrossPct = lcCost > 0 ? (rawProfit / lcCost * 100.0) : 0.0;
+    final grossPnlPct = (trade['gross_pnl_pct'] ?? trade['gross_profit_pct'] ?? fallbackGrossPct);
 
     return Scaffold(
       backgroundColor: (themeNotifier.value == ThemeMode.dark ? const Color(0xFF080d14) : const Color(0xFFf8fafc)),
@@ -3236,7 +3318,7 @@ class TradeDetailScreen extends StatelessWidget {
                   Divider(color: (themeNotifier.value == ThemeMode.dark ? const Color(0xFF202d42) : const Color(0xFFe2e8f0)), height: 20),
                   _kv(AppTranslations.t('trade.opened'), _fmtDate(opened)),
                   _kv(AppTranslations.t('trade.closed'), _fmtDate(closed)),
-                  _kv(AppTranslations.t('trade.duration'), '$durationMin mln'),
+                  _kv(AppTranslations.t('trade.duration'), formatDuration(double.tryParse(durationMin.toString()) ?? 0.0)),
                   _kv(AppTranslations.t('trade.dca_executions'), '$dcaSteps'),
                 ],
               ),
@@ -3258,7 +3340,7 @@ class TradeDetailScreen extends StatelessWidget {
                       final price = double.tryParse(ev['price']?.toString() ?? '0') ?? 0.0;
                       final val = double.tryParse(ev['value']?.toString() ?? '0') ?? 0.0;
                       final stepQty = val > 0 && price > 0 ? val / price : 0.0;
-                      return _kv(action, '${stepQty.toStringAsFixed(4)} @ \$${price.toStringAsFixed(2)} = \$${val.toStringAsFixed(2)}');
+                      return _kv(translateLifecycle(action.toString()), '${stepQty.toStringAsFixed(4)} @ \$${price.toStringAsFixed(2)} = \$${val.toStringAsFixed(2)}');
                     }),
                   ],
                 ),
@@ -3331,7 +3413,7 @@ class MenuScreen extends StatelessWidget {
             SubMenuItem(title: AppTranslations.t('menu.submenu_account'), subtitle: AppTranslations.t('account.sub'), icon: Icons.person, iconColor: const Color(0xFFa78bfa), route: const MyAccountScreen()),
             SubMenuItem(title: AppTranslations.t('menu.settings'), subtitle: AppTranslations.t('menu.settings_sub'), icon: Icons.settings, iconColor: const Color(0xFF94a3b8), route: const AppSettingsScreen()),
           ])))),
-          _menuItem(title: AppTranslations.t('support.title'), subtitle: AppTranslations.t('support.sub'), icon: Icons.help_outline, iconColor: const Color(0xFF38bdf8), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SupportScreen()))),
+          _menuItem(title: AppTranslations.t('support.title'), subtitle: AppTranslations.t('support.sub'), icon: Icons.help_outline, iconColor: const Color(0xFF38bdf8), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => SupportScreen(userId: userId)))),
           _menuItem(
             title: AppTranslations.t('subscription.title'),
             subtitle: AppTranslations.t('subscription.menu_sub'),
@@ -3475,15 +3557,37 @@ class SubMenuScreen extends StatelessWidget {
 }
 
 
-
 // ================= SUPPORT SCREEN =================
 class SupportScreen extends StatefulWidget {
-  const SupportScreen({super.key});
+  final String? userId;
+  const SupportScreen({super.key, this.userId});
   @override
   State<SupportScreen> createState() => _SupportScreenState();
 }
 
 class _SupportScreenState extends State<SupportScreen> {
+  int _unreadCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUnread();
+  }
+
+  Future<void> _fetchUnread() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+      if (token.isEmpty) return;
+      final res = await http.get(
+        Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/chat/unread_count'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        setState(() => _unreadCount = jsonDecode(res.body)['unread'] ?? 0);
+      }
+    } catch (e) { debugPrint('Unread fetch error: \$e'); }
+  }
   final TextEditingController _msgCtrl = TextEditingController();
   bool _isSending = false;
   String _statusMsg = "";
@@ -3567,6 +3671,42 @@ class _SupportScreenState extends State<SupportScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [const Color(0xFF10b981).withOpacity(0.2), const Color(0xFF0891b2).withOpacity(0.1)]),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF10b981)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [const Icon(Icons.chat_bubble, color: Color(0xFF10b981), size: 22), const SizedBox(width: 8), Text(AppTranslations.t('chat.title'), style: const TextStyle(color: Color(0xFF10b981), fontWeight: FontWeight.bold, fontSize: 15))]),
+                const SizedBox(height: 8),
+                Text(AppTranslations.t('chat.live_chat_desc'), style: TextStyle(color: textColor, fontSize: 12)),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: Badge(
+                      isLabelVisible: _unreadCount > 0,
+                      label: Text('$_unreadCount'),
+                      child: const Icon(Icons.support_agent, size: 18),
+                    ),
+                    label: Text(AppTranslations.t('chat.start_chat')),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10b981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (c) => ChatScreen(userId: widget.userId))),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderColor)),
@@ -3880,7 +4020,6 @@ class PlaceholderScreen extends StatelessWidget {
 }
 
 
-
 // ================= DEVELOPER PANEL SCREEN =================
 class DeveloperPanelScreen extends StatefulWidget {
   const DeveloperPanelScreen({super.key});
@@ -3889,6 +4028,21 @@ class DeveloperPanelScreen extends StatefulWidget {
 }
 
 class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
+  int _adminUnreadCount = 0;
+  Future<void> _fetchAdminUnread() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+      if (token.isEmpty) return;
+      final res = await http.get(
+        Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/chat/unread_count'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        setState(() => _adminUnreadCount = jsonDecode(res.body)['unread'] ?? 0);
+      }
+    } catch (e) { debugPrint('Admin unread fetch error: \$e'); }
+  }
   bool _isLoading = true;
   List<dynamic> _users = [];
   String _errorMsg = '';
@@ -3902,6 +4056,7 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
   @override
   void initState() {
+    _fetchAdminUnread();
     super.initState();
     _fetchUsers();
   }
@@ -3974,6 +4129,19 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
               onTap: () {
                 Navigator.pop(c);
                 Navigator.push(context, MaterialPageRoute(builder: (c) => const WalletSettingsScreen()));
+              },
+            ),
+            ListTile(
+              leading: Badge(
+                isLabelVisible: _adminUnreadCount > 0,
+                label: Text('$_adminUnreadCount'),
+                child: const Icon(Icons.chat_bubble, color: Color(0xFF10b981)),
+              ),
+              title: Text(AppTranslations.t('chat.inbox'), style: TextStyle(color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)), fontWeight: FontWeight.bold)),
+              subtitle: Text(AppTranslations.t('chat.admin_inbox_sub'), style: const TextStyle(fontSize: 12)),
+              onTap: () {
+                Navigator.pop(c);
+                Navigator.push(context, MaterialPageRoute(builder: (c) => const AdminChatScreen()));
               },
             ),
             ListTile(
@@ -4926,7 +5094,6 @@ Future<void> _showResetPasswordDialog() async {
 }
 
 
-
 // ================= ADMIN: USER TRADES SCREEN =================
 class AdminUserTradesScreen extends StatefulWidget {
   final int userId;
@@ -5128,7 +5295,6 @@ class _SearchAssetScreenState extends State<SearchAssetScreen> {
   }
 }
 
-
 // ================= ASSET DETAILS SCREEN =================
 class AssetDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> asset;
@@ -5289,7 +5455,7 @@ class _AssetDetailsScreenState extends State<AssetDetailsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(symbol, style: TextStyle(color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)), fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(status, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text(translateStatus(status), style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -5351,14 +5517,14 @@ class _AssetDetailsScreenState extends State<AssetDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildRow(AppTranslations.t('field.asset'), symbol),
-                  _buildRow(AppTranslations.t('field.status'), status == 'SUSPENDED' ? AppTranslations.t('status.suspended') : (status == 'ACTIVE' ? AppTranslations.t('status.active') : status), valColor: statusColor),
+                  _buildRow(AppTranslations.t('field.status'), translateStatus(status), valColor: statusColor),
                   _buildRow(AppTranslations.t('field.confidence'), '${_fmtNum(widget.asset['confidence_score'])}/100', valColor: green),
                   _buildRow(AppTranslations.t('field.health'), '${_fmtNum(widget.asset['health_score'])}/100', valColor: green),
                   _buildRow(AppTranslations.t('field.liquidity'), _fmtPrice(widget.asset['liquidity_24h'])),
                   _buildRow('${AppTranslations.t('dash.max')} DD', '-${_fmtNum(widget.asset['max_drawdown'])}%', valColor: red),
                   _buildRow(AppTranslations.t('field.current_dd'), '-${_fmtNum(widget.asset['current_drawdown'])}%', valColor: gold),
-                  _buildRow(AppTranslations.t('field.dd_duration'), '${_fmtNum(widget.asset['current_dd_duration_days'])} days'),
-                  _buildRow(AppTranslations.t('field.liquidity_trend'), widget.asset['liquidity_trend'] ?? 'N/A'),
+                  _buildRow(AppTranslations.t('field.dd_duration'), '${_fmtNum(widget.asset['current_dd_duration_days'])} ${AppTranslations.t('unit.days')}'),
+                  _buildRow(AppTranslations.t('field.liquidity_trend'), translateLiquidity(widget.asset['liquidity_trend'])),
                   _buildRow(AppTranslations.t('field.valid_exchanges'), '${widget.asset['valid_exchanges'] ?? 0}'),
                   _buildRow(AppTranslations.t('field.model'), '${widget.asset['model_version'] ?? 'N/A'}'),
                 ],
@@ -5380,7 +5546,7 @@ class _AssetDetailsScreenState extends State<AssetDetailsScreen> {
                     _buildRow(AppTranslations.t('field.wins_losses'), '${widget.experience!['winning_positions'] ?? 0} / ${widget.experience!['losing_positions'] ?? 0}'),
                     _buildRow(AppTranslations.t('field.total_net_pnl'), '\$${_fmtNum(widget.experience!['total_net_pnl'], decimals: 4)}', valColor: green),
                     _buildRow(AppTranslations.t('field.avg_pnl_trade'), '\$${_fmtNum(widget.experience!['avg_pnl'], decimals: 4)}', valColor: green),
-                    _buildRow(AppTranslations.t('field.avg_hold'), '${_fmtNum(widget.experience!['avg_hold_minutes'], decimals: 1)} min'),
+                    _buildRow(AppTranslations.t('field.avg_hold'), '${_fmtNum(widget.experience!['avg_hold_minutes'], decimals: 1)} ${AppTranslations.t('unit.minutes')}'),
                     _buildRow(AppTranslations.t('field.avg_max_dca'), '${_fmtNum(widget.experience!['avg_dca_levels'])} / ${widget.experience!['max_dca_levels'] ?? 0}'),
                     _buildRow(AppTranslations.t('field.experience_score'), _fmtNum(widget.experience!['experience_score'], decimals: 4), valColor: const Color(0xFFa78bfa)),
                   ],
@@ -5435,7 +5601,6 @@ class _AssetDetailsScreenState extends State<AssetDetailsScreen> {
     );
   }
 }
-
 
 // ================= ACTIVE UNIVERSE SCREEN =================
 
@@ -5735,7 +5900,7 @@ class _ActiveUniverseScreenState extends State<ActiveUniverseScreen> {
                                   children: [
                                     Text(sym, style: TextStyle(color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)), fontWeight: FontWeight.bold, fontSize: 13)),
                                     Text(textDirection: TextDirection.ltr, 'CS ${conf.toStringAsFixed(2)} · HS ${health.toStringAsFixed(2)}', style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                                    Text('Admitted $admitted', style: const TextStyle(color: Color(0xFF475569), fontSize: 9)),
+                                    Text('${AppTranslations.t('trade.admitted')} $admitted', style: const TextStyle(color: Color(0xFF475569), fontSize: 9)),
                                   ],
                                 ),
                               ),
@@ -5758,7 +5923,6 @@ class _ActiveUniverseScreenState extends State<ActiveUniverseScreen> {
     );
   }
 }
-
 
 // ================= EXPERIENCE SCREEN =================
 class ExperienceScreen extends StatefulWidget {
@@ -5885,7 +6049,7 @@ class _ExperienceScreenState extends State<ExperienceScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(sym, style: TextStyle(color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)), fontWeight: FontWeight.bold, fontSize: 13)),
-                                    Text(textDirection: TextDirection.ltr, 'score ${score.toStringAsFixed(4)}', style: const TextStyle(color: Color(0xFFa78bfa), fontSize: 10)),
+                                    Text(textDirection: TextDirection.ltr, '${AppTranslations.t('field.score')} ${score.toStringAsFixed(4)}', style: const TextStyle(color: Color(0xFFa78bfa), fontSize: 10)),
                                   ],
                                 ),
                               ],
@@ -5896,7 +6060,7 @@ class _ExperienceScreenState extends State<ExperienceScreen> {
                             _kv(AppTranslations.t('field.win_rate'), '${wr.toStringAsFixed(1)}%', vColor: wr >= 50 ? green : Colors.orange),
                             _kv(AppTranslations.t('field.avg_pnl_trade'), '\$${avgPnl.toStringAsFixed(4)}', vColor: avgPnl >= 0 ? green : red),
                             _kv(AppTranslations.t('field.total_net_pnl'), '\$${netPnl.toStringAsFixed(4)}', vColor: netPnl >= 0 ? green : red),
-                            _kv(AppTranslations.t('field.avg_hold'), '${avgHold.toStringAsFixed(1)} min'),
+                            _kv(AppTranslations.t('field.avg_hold'), '${avgHold.toStringAsFixed(1)} ${AppTranslations.t('unit.minutes')}'),
                             _kv(AppTranslations.t('field.avg_max_dca'), '${avgDca.toStringAsFixed(2)} / $maxDca'),
                             _kv(AppTranslations.t('field.avg_capital_locked'), '\$${avgCap.toStringAsFixed(2)}'),
                             _kv(AppTranslations.t('field.tp_sl'), '$tp / $sl'),
@@ -5988,7 +6152,6 @@ class _TechnicalErrorsScreenState extends State<TechnicalErrorsScreen> {
     );
   }
 }
-
 
 // ================= TRADING SETTINGS SCREEN =================
 class TradingSettingsScreen extends StatefulWidget {
@@ -6526,7 +6689,6 @@ class _TradingSettingsScreenState extends State<TradingSettingsScreen> {
   }
 }
 
-
 // ================= MY ACCOUNT SCREEN =================
 class MyAccountScreen extends StatefulWidget {
   const MyAccountScreen({super.key});
@@ -6832,7 +6994,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     );
   }
 
-
   void _showLanguagePicker(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -7030,7 +7191,6 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   }
 }
 
-
 // ================= ACTIVE SESSIONS SCREEN =================
 class ActiveSessionsScreen extends StatefulWidget {
   final List<dynamic> sessions;
@@ -7117,7 +7277,6 @@ class _ActiveSessionsScreenState extends State<ActiveSessionsScreen> {
     );
   }
 }
-
 
 // ================= REGISTER SCREEN =================
 class RegisterScreen extends StatefulWidget {
@@ -7282,7 +7441,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-
 // ==========================================
 // OTP VERIFICATION SCREEN (Added by Audit)
 // ==========================================
@@ -7395,7 +7553,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 }
-
 
 // ============================================================
 // SUBSCRIPTION SCREEN (Phase 5A — read-only)
@@ -7663,7 +7820,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     return '${d.day}/${d.month}/${d.year}';
   }
 }
-
 
 // ============================================================
 // PAYMENT SCREEN (Phase 5B)
@@ -8018,7 +8174,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 }
-
 
 // ============================================================
 // PENDING PAYMENTS SCREEN (Phase 5C)
@@ -8419,7 +8574,6 @@ class _WalletSettingsScreenState extends State<WalletSettingsScreen> {
   }
 }
 
-
 // ============================================================
 // PERMANENT ASSETS SCREEN (Phase B)
 // ============================================================
@@ -8723,7 +8877,7 @@ class _PermanentAssetsScreenState extends State<PermanentAssetsScreen> {
                                   ),
                                 ],
                               ),
-                              Text('${AppTranslations.t('permanent.added_by')}: $by', style: const TextStyle(color: muted, fontSize: 11)),
+                              Text('${AppTranslations.t('permanent.added_by')}: ${(by.toLowerCase() == 'admin' || by.toLowerCase() == 'user_556') ? AppTranslations.t('permanent.admin_role') : by}', style: const TextStyle(color: muted, fontSize: 11)),
                               if (reason.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Text('${AppTranslations.t('permanent.reason_label')}: $reason', style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 11)),
@@ -8770,7 +8924,6 @@ class _PermanentAssetsScreenState extends State<PermanentAssetsScreen> {
     );
   }
 }
-
 
 // ============================================================
 // ADMIN PERMANENT ASSETS SCREEN (Phase 6C)
@@ -8943,7 +9096,7 @@ class _AdminPermanentAssetsScreenState extends State<AdminPermanentAssetsScreen>
         backgroundColor: cardBg,
         elevation: 0,
         leading: IconButton(icon: Icon(Icons.arrow_back, color: accent), onPressed: () => Navigator.pop(context)),
-        title: Text('Permanent Assets — ${widget.username}', style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text('Favorite Assets — ${widget.username}', style: TextStyle(color: accent, fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [IconButton(icon: Icon(Icons.refresh, color: accent), onPressed: _fetch)],
       ),
       body: _isLoading
@@ -9079,7 +9232,6 @@ class _AdminPermanentAssetsScreenState extends State<AdminPermanentAssetsScreen>
     );
   }
 }
-
 
 // ============================================================
 // GLOBAL PERMANENT ASSETS (Admin)

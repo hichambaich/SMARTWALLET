@@ -365,7 +365,8 @@
     "maximum": "Maximum",
     "status": "Status",
     "pnl_short": "PNL",
-    "profit": "Profit"
+    "profit": "Profit",
+    "score": "Score"
   },
   "page": {
     "active_universe": "Active Universe",
@@ -443,7 +444,8 @@
     "closed": "Closed",
     "duration": "Duration",
     "dca_executions": "DCA executions",
-    "lifecycle": "Lifecycle"
+    "lifecycle": "Lifecycle",
+    "admitted": "Admitted"
   },
   "perf": {
     "today": "Today",
@@ -714,8 +716,8 @@
     "assets_tracked": "assets tracked"
   },
   "status": {
-    "suspended": "SUSPENDED",
-    "active": "ACTIVE",
+    "suspended": "Suspended",
+    "active": "Active",
     "deteriorating": "DETERIORATING",
     "running": "RUNNING"
   },
@@ -777,17 +779,17 @@
     "submitted": "Payment request submitted. Awaiting admin review."
   },
   "permanent": {
-    "menu_title": "Permanent Assets",
-    "menu_sub": "Your personal whitelist",
-    "title": "Permanent Assets",
+    "menu_title": "Favorite Assets",
+    "menu_sub": "Your favorite personal list",
+    "title": "Favorite Assets",
     "add_asset": "Add Asset",
     "symbol": "Symbol",
     "symbol_hint": "BTC (or BTC/USDT)",
     "reason": "Reason",
     "reason_hint": "Why add this asset?",
-    "add_button": "Add to Permanent List",
-    "your_assets": "Your Permanent Assets",
-    "no_assets": "No permanent assets yet",
+    "add_button": "Add to Favorite List",
+    "your_assets": "Your favorite assets",
+    "no_assets": "No favorite assets yet",
     "added_by": "Added by",
     "reason_label": "Reason",
     "recently_removed": "Recently Removed",
@@ -797,9 +799,10 @@
     "remove_reason_hint": "e.g. too volatile",
     "symbol_reason_required": "Symbol and reason are required",
     "symbol_format_error": "Symbol must be like BTC/USDT",
-    "added_success": "added to your permanent list",
+    "added_success": "added to your favorite list",
     "removed_success": "removed",
-    "connection_error": "Connection error"
+    "connection_error": "Connection error",
+    "admin_role": "Admin"
   },
   "global": {
     "title": "Global Nominations",
@@ -819,5 +822,35 @@
   },
   "journal": {
     "empty": "Journal is empty"
+  },
+  "telegram.command_hint": "Send this command to the bot to receive alerts:",
+  "telegram.copy_command": "Command copied successfully!",
+  "unit": {
+    "days": "days",
+    "minutes": "min"
+  },
+  "liquidity": {
+    "stable": "Stable",
+    "up": "Up",
+    "down": "Down",
+    "improving": "Improving",
+    "deteriorating": "Deteriorating"
+  },
+  "lifecycle": {
+    "adoption": "Adoption",
+    "adoption_add": "Adoption Add",
+    "buy": "Buy",
+    "sell": "Sell",
+    "dca": "DCA"
+  },
+  "chat": {
+    "title": "Support Chat",
+    "no_messages": "No messages yet.",
+    "type_message": "Type your message...",
+    "support_button": "Support",
+    "live_chat_desc": "Chat directly with our support team inside the app.",
+    "start_chat": "Start Chat",
+    "admin_inbox_sub": "Read and reply to user messages",
+    "inbox": "Chat Inbox"
   }
 }

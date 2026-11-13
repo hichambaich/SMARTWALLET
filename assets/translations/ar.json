@@ -365,7 +365,8 @@
     "maximum": "الأعلى",
     "status": "الحالة",
     "pnl_short": "الربح",
-    "profit": "الربح"
+    "profit": "الربح",
+    "score": "النقاط"
   },
   "page": {
     "active_universe": "الأصول النشطة",
@@ -443,7 +444,8 @@
     "closed": "أُغلقت",
     "duration": "المدة",
     "dca_executions": "تنفيذات التعزيز",
-    "lifecycle": "دورة الحياة"
+    "lifecycle": "دورة الحياة",
+    "admitted": "تاريخ الإضافة"
   },
   "perf": {
     "today": "اليوم",
@@ -777,17 +779,17 @@
     "submitted": "تم إرسال طلب الدفع. في انتظار مراجعة الإدارة."
   },
   "permanent": {
-    "menu_title": "الأصول الدائمة",
-    "menu_sub": "قائمتك الشخصية المعتمدة",
-    "title": "الأصول الدائمة",
+    "menu_title": "الأصول المفضلة",
+    "menu_sub": "قائمتك الشخصية المفضلة",
+    "title": "الأصول المفضلة",
     "add_asset": "إضافة أصل",
     "symbol": "الرمز",
     "symbol_hint": "BTC (أو BTC/USDT)",
     "reason": "السبب",
     "reason_hint": "لماذا تضيف هذا الأصل؟",
-    "add_button": "أضف إلى القائمة الدائمة",
-    "your_assets": "أصولك الدائمة",
-    "no_assets": "لا توجد أصول دائمة بعد",
+    "add_button": "أضف إلى القائمة المفضلة",
+    "your_assets": "أصولك المفضلة",
+    "no_assets": "لا توجد أصول مفضلة حالياً",
     "added_by": "أضيف بواسطة",
     "reason_label": "السبب",
     "recently_removed": "أُزيلت مؤخراً",
@@ -797,9 +799,10 @@
     "remove_reason_hint": "مثال: تقلب عالٍ جداً",
     "symbol_reason_required": "الرمز والسبب مطلوبان",
     "symbol_format_error": "يجب أن يكون الرمز مثل BTC/USDT",
-    "added_success": "أضيف إلى قائمتك الدائمة",
+    "added_success": "أضيف إلى قائمتك المفضلة",
     "removed_success": "أُزيل",
-    "connection_error": "خطأ في الاتصال"
+    "connection_error": "خطأ في الاتصال",
+    "admin_role": "المدير"
   },
   "global": {
     "title": "الترشيحات العامة",
@@ -819,5 +822,35 @@
   },
   "journal": {
     "empty": "السجل فارغ"
+  },
+  "telegram.command_hint": "أرسل هذا الأمر إلى البوت لتلقي الإشعارات:",
+  "telegram.copy_command": "تم نسخ الأمر بنجاح!",
+  "unit": {
+    "days": "يوم",
+    "minutes": "دقيقة"
+  },
+  "liquidity": {
+    "stable": "مستقر",
+    "up": "صاعد",
+    "down": "هابط",
+    "improving": "متحسن",
+    "deteriorating": "متدهور"
+  },
+  "lifecycle": {
+    "adoption": "تبني",
+    "adoption_add": "إضافة تبني",
+    "buy": "شراء",
+    "sell": "بيع",
+    "dca": "تعزيز"
+  },
+  "chat": {
+    "title": "المحادثة والدعم",
+    "no_messages": "لا توجد رسائل بعد.",
+    "type_message": "اكتب رسالتك...",
+    "support_button": "الدعم الفني",
+    "live_chat_desc": "تواصل مع فريق الدعم مباشرة عبر التطبيق.",
+    "start_chat": "ابدأ المحادثة",
+    "admin_inbox_sub": "قراءة الرد على رسائل المستخدمين",
+    "inbox": "المحادثات الواردة"
   }
 }
