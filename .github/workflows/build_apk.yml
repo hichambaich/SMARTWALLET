@@ -96,17 +96,56 @@ jobs:
       - name: Install Pillow & Generate Icon
         run: |
           pip install Pillow
-          python3 -c "
+          python3 << 'INNEREOF'
           from PIL import Image
           import os
-          src = Image.open('web/icons/Icon-512.png').convert('RGBA')
+          
+          ICON_SRC = 'web/icons/Icon-512.png'
+          ANDROID_RES = 'android/app/src/main/res'
           densities = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
+          src = Image.open(ICON_SRC).convert('RGBA')
+
+          # 1. Legacy icon (fills the frame)
           for d, s in densities.items():
               p = f'android/app/src/main/res/mipmap-{d}/ic_launcher.png'
               os.makedirs(os.path.dirname(p), exist_ok=True)
               src.resize((s, s), Image.LANCZOS).save(p)
-          "
 
+          # 2. Adaptive icon (safe zone 66/108)
+          for d, s in densities.items():
+              p = f'android/app/src/main/res/mipmap-{d}/ic_launcher_foreground.png'
+              fg = Image.new('RGBA', (s, s), (0, 0, 0, 0))
+              csize = int(s * 66 / 108)
+              content = src.resize((csize, csize), Image.LANCZOS)
+              off = (s - csize) // 2
+              fg.paste(content, (off, off), content)
+              fg.save(p)
+
+          # 3. Adaptive XML
+          anydpi = 'android/app/src/main/res/mipmap-anydpi-v26'
+          os.makedirs(anydpi, exist_ok=True)
+          with open(f'{anydpi}/ic_launcher.xml', 'w') as f:
+              f.write('<?xml version="1.0" encoding="utf-8"?>\n'
+                      '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+                      '    <background android:drawable="@color/ic_launcher_background" />\n'
+                      '    <foreground android:drawable="@mipmap/ic_launcher_foreground" />\n'
+                      '</adaptive-icon>\n')
+
+          # 4. Background color
+          values = 'android/app/src/main/res/values'
+          os.makedirs(values, exist_ok=True)
+          colors = f'{values}/colors.xml'
+          c_content = ''
+          if os.path.exists(colors):
+              with open(colors) as fh: c_content = fh.read()
+          if 'ic_launcher_background' not in c_content:
+              if not c_content.strip():
+                  c_content = '<?xml version="1.0" encoding="utf-8"?>\n<resources></resources>'
+              c_content = c_content.replace('</resources>',
+                  '    <color name="ic_launcher_background">#FFFFFF</color>\n</resources>')
+              with open(colors, 'w') as fh: fh.write(c_content)
+          print('DONE: icons + adaptive + background generated')
+          INNEREOF
       - name: Install dependencies
         run: flutter pub get
 
