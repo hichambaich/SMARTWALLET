@@ -26,38 +26,6 @@ jobs:
         run: flutter create --org com.smartwallet --project-name app --platforms android .
 
 
-      - name: Enable Core Library Desugaring
-        run: |
-          python3 << 'INNEREOF'
-          import re
-          
-          path = 'android/app/build.gradle'
-          with open(path, 'r') as f:
-              content = f.read()
-          
-          # 1. تفعيل الميزة داخل compileOptions
-          if 'coreLibraryDesugaringEnabled' not in content:
-              content = content.replace(
-                  'compileOptions {',
-                  'compileOptions {\n        coreLibraryDesugaringEnabled true'
-              )
-          
-          # 2. إضافة التبعية داخل dependencies
-          dep_line = "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'"
-          if 'desugar_jdk_libs' not in content:
-              if 'dependencies {' in content:
-                  content = content.replace(
-                      'dependencies {',
-                      'dependencies {\n    ' + dep_line
-                  )
-              else:
-                  # في حال لم تكن dependencies موجودة (نادرة)
-                  content += f'\n\ndependencies {{\n    {dep_line}\n}}\n'
-          
-          with open(path, 'w') as f:
-              f.write(content)
-          print('DONE: coreLibraryDesugaring enabled and dependency added')
-          INNEREOF
 
       - name: Setup Firebase & Force Compatible Versions
         run: |
@@ -180,6 +148,48 @@ jobs:
               with open(colors, 'w') as fh: fh.write(c_content)
           print('DONE: icons + adaptive + background generated')
           INNEREOF
+      - name: Enable Core Library Desugaring
+        run: |
+          python3 << 'INNEREOF'
+          import re
+          
+          path = 'android/app/build.gradle'
+          with open(path, 'r') as f:
+              content = f.read()
+          
+          # 1. تحديث compileSdk إلى 35
+          content = re.sub(r'compileSdk\s*=\s*flutter\.compileSdkVersion', 'compileSdk = 35', content)
+          content = re.sub(r'compileSdkVersion\s+\d+', 'compileSdkVersion 35', content)
+          
+          # 2. تحديث ndkVersion إلى 26.1.10909125
+          content = re.sub(r'ndkVersion\s*=\s*flutter\.ndkVersion', 'ndkVersion = "26.1.10909125"', content)
+          content = re.sub(r'ndkVersion\s+"[^"]*"', 'ndkVersion "26.1.10909125"', content)
+          if 'ndkVersion' not in content:
+              content = content.replace('android {', 'android {\n    ndkVersion "26.1.10909125"', 1)
+          
+          # 3. تفعيل coreLibraryDesugaringEnabled
+          if 'coreLibraryDesugaringEnabled' not in content:
+              content = content.replace(
+                  'compileOptions {',
+                  'compileOptions {\n        coreLibraryDesugaringEnabled true'
+              )
+          
+          # 4. تحديث التبعية إلى 2.1.4
+          content = re.sub(r'coreLibraryDesugaring\s+[\'"].*?[\'"]', 'coreLibraryDesugaring \'com.android.tools:desugar_jdk_libs:2.1.4\'', content)
+          if 'desugar_jdk_libs' not in content:
+              if 'dependencies {' in content:
+                  content = content.replace(
+                      'dependencies {',
+                      'dependencies {\n    coreLibraryDesugaring \'com.android.tools:desugar_jdk_libs:2.1.4\''
+                  )
+              else:
+                  content += '\n\ndependencies {\n    coreLibraryDesugaring \'com.android.tools:desugar_jdk_libs:2.1.4\'\n}\n'
+          
+          with open(path, 'w') as f:
+              f.write(content)
+          print('DONE: compileSdk=35, ndkVersion=26.1.10909125, desugar=2.1.4')
+          INNEREOF
+
       - name: Install dependencies
         run: flutter pub get
 
