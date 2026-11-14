@@ -28,32 +28,37 @@ jobs:
 
       - name: Enable Core Library Desugaring
         run: |
-          python3 - << 'INNEREOF'
+          python3 << 'INNEREOF'
           import re
           
-          # تعديل android/app/build.gradle
           path = 'android/app/build.gradle'
           with open(path, 'r') as f:
               content = f.read()
           
-          # إضافة coreLibraryDesugaringEnabled true داخل compileOptions
+          # 1. تفعيل الميزة داخل compileOptions
           if 'coreLibraryDesugaringEnabled' not in content:
               content = content.replace(
                   'compileOptions {',
                   'compileOptions {\n        coreLibraryDesugaringEnabled true'
               )
           
-          # إضافة التبعية coreLibraryDesugaring
+          # 2. إضافة التبعية داخل dependencies
+          dep_line = "coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'"
           if 'desugar_jdk_libs' not in content:
-              content = content.replace(
-                  'dependencies {',
-                  'dependencies {\n    coreLibraryDesugaring \'com.android.tools:desugar_jdk_libs:2.1.4\''
-              )
+              if 'dependencies {' in content:
+                  content = content.replace(
+                      'dependencies {',
+                      'dependencies {\n    ' + dep_line
+                  )
+              else:
+                  # في حال لم تكن dependencies موجودة (نادرة)
+                  content += f'\n\ndependencies {{\n    {dep_line}\n}}\n'
           
           with open(path, 'w') as f:
               f.write(content)
-          print('DONE: coreLibraryDesugaring enabled')
+          print('DONE: coreLibraryDesugaring enabled and dependency added')
           INNEREOF
+
       - name: Setup Firebase & Force Compatible Versions
         run: |
           cp google-services.json android/app/
