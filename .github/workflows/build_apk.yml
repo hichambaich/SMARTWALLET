@@ -25,6 +25,35 @@ jobs:
       - name: Create Android folder
         run: flutter create --org com.smartwallet --project-name app --platforms android .
 
+
+      - name: Enable Core Library Desugaring
+        run: |
+          python3 - << 'INNEREOF'
+          import re
+          
+          # تعديل android/app/build.gradle
+          path = 'android/app/build.gradle'
+          with open(path, 'r') as f:
+              content = f.read()
+          
+          # إضافة coreLibraryDesugaringEnabled true داخل compileOptions
+          if 'coreLibraryDesugaringEnabled' not in content:
+              content = content.replace(
+                  'compileOptions {',
+                  'compileOptions {\n        coreLibraryDesugaringEnabled true'
+              )
+          
+          # إضافة التبعية coreLibraryDesugaring
+          if 'desugar_jdk_libs' not in content:
+              content = content.replace(
+                  'dependencies {',
+                  'dependencies {\n    coreLibraryDesugaring \'com.android.tools:desugar_jdk_libs:2.1.4\''
+              )
+          
+          with open(path, 'w') as f:
+              f.write(content)
+          print('DONE: coreLibraryDesugaring enabled')
+          INNEREOF
       - name: Setup Firebase & Force Compatible Versions
         run: |
           cp google-services.json android/app/
