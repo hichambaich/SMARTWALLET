@@ -764,7 +764,9 @@
     "subscribe_monthly": "S'abonner au plan mensuel",
     "subscribe_monthly_desc": "30 jours de trading automatisé illimité",
     "subscribe_now": "S'abonner maintenant",
-    "menu_sub": "Gérer votre plan"
+    "menu_sub": "Gérer votre plan",
+    "history_title": "Historique des abonnements",
+    "no_history": "Aucun historique"
   },
   "payment": {
     "title": "Paiement",

@@ -763,7 +763,9 @@
     "subscribe_monthly": "Subscribe to Monthly Plan",
     "subscribe_monthly_desc": "Get 30 days of unlimited automated trading",
     "subscribe_now": "Subscribe Now",
-    "menu_sub": "Manage your plan"
+    "menu_sub": "Manage your plan",
+    "history_title": "Subscription History",
+    "no_history": "No previous history"
   },
   "payment": {
     "title": "Payment",

@@ -7624,11 +7624,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Map<String, dynamic> _info = {};
   bool _isLoading = true;
   String _error = '';
+  List<dynamic> _history = [];
+  bool _isLoadingHistory = false;
 
   @override
   void initState() {
     super.initState();
     _fetchSubscription();
+    _fetchHistory();
   }
 
   Future<void> _fetchSubscription() async {
@@ -7656,6 +7659,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         _error = 'Connection error';
         _isLoading = false;
       });
+    }
+  }
+
+
+  Future<void> _fetchHistory() async {
+    setState(() => _isLoadingHistory = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+      final res = await http.get(
+        Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/subscription/list'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          _history = jsonDecode(res.body)['subscriptions'] ?? [];
+          _isLoadingHistory = false;
+        });
+      } else {
+        setState(() => _isLoadingHistory = false);
+      }
+    } catch (e) {
+      setState(() => _isLoadingHistory = false);
     }
   }
 
@@ -7855,7 +7881,44 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           ],
                         ),
                       ),
-                  ],
+                  
+                    const SizedBox(height: 24),
+                    Text(AppTranslations.t('subscription.history_title'), style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    if (_isLoadingHistory)
+                      const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                    else if (_history.isEmpty)
+                      Text(AppTranslations.t('subscription.no_history'), style: TextStyle(color: textColor.withOpacity(0.5)))
+                    else
+                      ..._history.map((sub) {
+                        final plan = sub['plan_name'] ?? '?';
+                        final status = sub['computed_status'] ?? sub['status'] ?? '?';
+                        final start = sub['start_date'] != null ? DateTime.fromMillisecondsSinceEpoch((sub['start_date'] * 1000).toInt()).toString().substring(0, 10) : 'N/A';
+                        final end = sub['end_date'] != null ? DateTime.fromMillisecondsSinceEpoch((sub['end_date'] * 1000).toInt()).toString().substring(0, 10) : 'N/A';
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: borderColor)),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(plan, style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                                  Text('$start -> $end', style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 11)),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(color: _statusColor(status).withOpacity(0.2), borderRadius: BorderRadius.circular(6)),
+                                child: Text(_statusLabel(status), style: TextStyle(color: _statusColor(status), fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+],
                 ),
     );
   }

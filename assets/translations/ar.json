@@ -763,7 +763,9 @@
     "subscribe_monthly": "اشترك في الخطة الشهرية",
     "subscribe_monthly_desc": "احصل على 30 يوماً من التداول الآلي غير المحدود",
     "subscribe_now": "اشترك الآن",
-    "menu_sub": "إدارة خطتك"
+    "menu_sub": "إدارة خطتك",
+    "history_title": "سجل الاشتراكات",
+    "no_history": "لا يوجد سجل سابق"
   },
   "payment": {
     "title": "الدفع",
