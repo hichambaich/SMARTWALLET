@@ -713,7 +713,12 @@
     "remove_exempt": "إلغاء الإعفاء"
   },
   "analytics": {
-    "assets_tracked": "أصول متتبعة"
+    "assets_tracked": "أصول متتبعة",
+    "title": "التحليلات",
+    "sub": "إحصائيات الأداء الدورية",
+    "pnl": "الربح",
+    "trades": "الصفقات",
+    "win_rate": "معدل الفوز"
   },
   "status": {
     "suspended": "معلق",

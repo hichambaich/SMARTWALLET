@@ -21,13 +21,19 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isLoading = true;
   bool _isSending = false;
   Timer? _refreshTimer;
+  int _totalMessages = 0;
+  int _waitingReply = 0;
 
   @override
   void initState() {
     super.initState();
     _resolvedUserId = int.tryParse(widget.userId ?? '') ?? 0;
     _fetchMessages();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _fetchMessages(silent: true));
+    _fetchStats();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _fetchMessages(silent: true);
+      _fetchStats();
+    });
   }
 
   @override
@@ -36,6 +42,28 @@ class _ChatScreenState extends State<ChatScreen> {
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+
+  Future<void> _fetchStats() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token') ?? '';
+      if (token.isEmpty) return;
+      final res = await http.get(
+        Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/chat/stats'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _totalMessages = data['total'] ?? 0;
+          _waitingReply = data['waiting'] ?? 0;
+        });
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
   Future<void> _fetchMessages({bool silent = false}) async {
@@ -110,6 +138,22 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 1,
         leading: IconButton(icon: Icon(Icons.arrow_back, color: accent), onPressed: () => Navigator.pop(context)),
         title: Text(AppTranslations.t('chat.title'), style: TextStyle(color: accent, fontWeight: FontWeight.bold)),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(28),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+            color: cardBg,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("Total: $_totalMessages", style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
+                if (_waitingReply > 0)
+                  Text("Waiting: $_waitingReply", style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ),
       ),
       body: Column(
         children: [

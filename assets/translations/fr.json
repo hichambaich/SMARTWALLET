@@ -713,7 +713,12 @@
     "remove_exempt": "Retirer l'exemption"
   },
   "analytics": {
-    "assets_tracked": "actifs suivis"
+    "assets_tracked": "actifs suivis",
+    "title": "Analyses",
+    "sub": "Statistiques de performance",
+    "pnl": "PnL",
+    "trades": "Trades",
+    "win_rate": "Taux de réussite"
   },
   "status": {
     "suspended": "Suspendu",

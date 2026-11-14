@@ -11,6 +11,7 @@ import 'launcher/open_url_stub.dart'
 import 'package:fl_chart/fl_chart.dart';
 import 'chat_screen.dart';
 import 'admin_chat_screen.dart';
+import 'analytics_screen.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -3462,6 +3463,7 @@ class MenuScreen extends StatelessWidget {
           ])))),
           _menuItem(title: AppTranslations.t('menu.submenu_analytics'), subtitle: AppTranslations.t('menu.submenu_analytics_sub'), icon: Icons.psychology, iconColor: const Color(0xFFa78bfa), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => SubMenuScreen(title: AppTranslations.t('menu.submenu_analytics'), items: [
             SubMenuItem(title: AppTranslations.t('menu.experience'), subtitle: AppTranslations.t('menu.experience_sub'), icon: Icons.psychology, iconColor: const Color(0xFFa78bfa), route: const ExperienceScreen()),
+            SubMenuItem(title: AppTranslations.t('analytics.title'), subtitle: AppTranslations.t('analytics.sub'), icon: Icons.analytics, iconColor: const Color(0xFF38bdf8), route: const AnalyticsScreen()),
             SubMenuItem(title: AppTranslations.t('menu.errors'), subtitle: AppTranslations.t('menu.errors_sub'), icon: Icons.bug_report, iconColor: const Color(0xFFef4444), route: const TechnicalErrorsScreen()),
           ])))),
           _menuItem(title: AppTranslations.t('menu.connect_binance_full'), subtitle: AppTranslations.t('menu.connect_binance_full_sub'), icon: Icons.link, iconColor: const Color(0xFF38bdf8), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const TradingSettingsScreen()))),
