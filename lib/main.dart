@@ -495,88 +495,50 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _setupFCM() async {
-    final status = StringBuffer();
+    String status = "";
     try {
-      status.writeln("1. Firebase init...");
+      status += "1.";
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
       }
-      status.writeln("   Firebase OK");
-
-      status.writeln("2. Request permission...");
+      status += "FB OK. ";
+      
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
-      status.writeln("   Permission: ${settings.authorizationStatus}");
-
-      status.writeln("3. Get token...");
+      status += "Perm:${settings.authorizationStatus.toString().split('.').last}. ";
+      
       final token = await messaging.getToken();
-      status.writeln("   Token: ${token ?? 'NULL'}");
-
+      status += "Tok:${token != null ? 'YES' : 'NULL'}. ";
+      
       if (token != null) {
         final prefs = await SharedPreferences.getInstance();
         final authToken = prefs.getString('auth_token') ?? '';
-        status.writeln("4. auth_token present: ${authToken.isNotEmpty}");
-
         if (authToken.isNotEmpty) {
-          try {
-            final parts = authToken.split('.');
-            final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
-            final payloadMap = jsonDecode(payload);
-            final userId = (payloadMap['user_id'] as num?)?.toInt();
-            status.writeln("5. user_id: $userId");
-
-            if (userId != null) {
-              final res = await http.post(
-                Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
-                headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
-                body: jsonEncode({'user_id': userId, 'fcm_token': token}),
-              );
-              status.writeln("6. Server: ${res.statusCode} ${res.body}");
-            }
-          } catch (e) {
-            status.writeln("   JWT error: $e");
-          }
-        }
+          final parts = authToken.split('.');
+          final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+          final userId = (jsonDecode(payload)['user_id'] as num?)?.toInt();
+          if (userId != null) {
+            final res = await http.post(
+              Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
+              headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
+              body: jsonEncode({'user_id': userId, 'fcm_token': token}),
+            );
+            status += "Srv:${res.statusCode}";
+          } else { status += "NoUID"; }
+        } else { status += "NoToken"; }
       }
-
-      messaging.onTokenRefresh.listen((newToken) async {
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          final authToken = prefs.getString('auth_token') ?? '';
-          if (authToken.isNotEmpty) {
-            final parts = authToken.split('.');
-            final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
-            final userId = (jsonDecode(payload)['user_id'] as num?)?.toInt();
-            if (userId != null) {
-              await http.post(
-                Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
-                headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
-                body: jsonEncode({'user_id': userId, 'fcm_token': newToken}),
-              );
-            }
-          }
-        } catch (_) {}
-      });
     } catch (e) {
-      status.writeln("EXCEPTION: $e");
+      status += "ERR:$e";
     }
-
-    debugPrint(status.toString());
-
+    
     if (mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (c) => AlertDialog(
-            title: const Text('FCM Diagnostic'),
-            content: SingleChildScrollView(
-              child: SelectableText(status.toString(), style: const TextStyle(fontSize: 11, fontFamily: 'monospace')),
-            ),
-            actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))],
-          ),
-        );
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("FCM: " + status, style: const TextStyle(fontSize: 10)),
+          duration: const Duration(seconds: 15),
+          backgroundColor: status.contains("Srv:200") ? Colors.green : Colors.red,
+        ),
+      );
     }
   }
 
