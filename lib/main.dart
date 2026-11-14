@@ -158,32 +158,63 @@ String translateLifecycle(String action) {
 
   Future<void> _setupFCM() async {
     try {
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      debugPrint("FCM_SETUP: Starting...");
       
-      // طلب الإذن
+      // 1. تأكد من تهيئة Firebase
+      if (Firebase.apps.isEmpty) {
+        debugPrint("FCM_SETUP: Firebase not initialized, initializing now...");
+        await Firebase.initializeApp();
+      }
+      debugPrint("FCM_SETUP: Firebase initialized.");
+      
+      // 2. اطلب الإذن
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
       NotificationSettings settings = await messaging.requestPermission(
         alert: true, badge: true, sound: true,
       );
+      debugPrint("FCM_SETUP: Permission status: \${settings.authorizationStatus}");
       
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        // الحصول على التوكن
-        String? token = await messaging.getToken();
-        if (token != null) {
-          debugPrint("FCM Token: $token");
-          // إرسال التوكن للسيرفر
-          final prefs = await SharedPreferences.getInstance();
-          final authToken = prefs.getString('auth_token') ?? '';
-          if (authToken.isNotEmpty) {
-            await http.post(
-              Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
-              headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
-              body: jsonEncode({'fcm_token': token}),
-            );
-          }
+      // 3. احصل على التوكن
+      String? token = await messaging.getToken();
+      debugPrint("FCM_SETUP: Token = \${token ?? 'NULL'}");
+      
+      if (token != null) {
+        // 4. اقرأ auth_token من SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        String authToken = prefs.getString('auth_token') ?? '';
+        debugPrint("FCM_SETUP: auth_token present = \${authToken.isNotEmpty}");
+        
+        if (authToken.isNotEmpty) {
+          // 5. أرسل التوكن للسيرفر
+          final res = await http.post(
+            Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
+            headers: {'Authorization': 'Bearer \$authToken', 'Content-Type': 'application/json'},
+            body: jsonEncode({'fcm_token': token}),
+          );
+          debugPrint("FCM_SETUP: Server response = \${res.statusCode} \${res.body}");
+        } else {
+          debugPrint("FCM_SETUP: No auth_token yet. Will retry after login.");
         }
       }
+      
+      // 6. راقب تحديث التوكن مستقبلاً
+      messaging.onTokenRefresh.listen((newToken) async {
+        debugPrint("FCM_REFRESH: New token = \${newToken}");
+        final prefs = await SharedPreferences.getInstance();
+        String authToken = prefs.getString('auth_token') ?? '';
+        if (authToken.isNotEmpty) {
+          await http.post(
+            Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
+            headers: {'Authorization': 'Bearer \$authToken', 'Content-Type': 'application/json'},
+            body: jsonEncode({'fcm_token': newToken}),
+          );
+        }
+      });
+      
+      debugPrint("FCM_SETUP: Complete.");
     } catch (e) {
-      debugPrint("FCM Error: $e");
+      debugPrint("FCM_SETUP_ERROR: \$e");
+      debugPrint("FCM_SETUP_TRACEBACK: \$st");
     }
   }
 
