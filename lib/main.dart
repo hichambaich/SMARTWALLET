@@ -156,67 +156,6 @@ String translateLifecycle(String action) {
 }
 
 
-  Future<void> _setupFCM() async {
-    try {
-      debugPrint("FCM_SETUP: Starting...");
-      
-      // 1. تأكد من تهيئة Firebase
-      if (Firebase.apps.isEmpty) {
-        debugPrint("FCM_SETUP: Firebase not initialized, initializing now...");
-        await Firebase.initializeApp();
-      }
-      debugPrint("FCM_SETUP: Firebase initialized.");
-      
-      // 2. اطلب الإذن
-      FirebaseMessaging messaging = FirebaseMessaging.instance;
-      NotificationSettings settings = await messaging.requestPermission(
-        alert: true, badge: true, sound: true,
-      );
-      debugPrint("FCM_SETUP: Permission status: \${settings.authorizationStatus}");
-      
-      // 3. احصل على التوكن
-      String? token = await messaging.getToken();
-      debugPrint("FCM_SETUP: Token = \${token ?? 'NULL'}");
-      
-      if (token != null) {
-        // 4. اقرأ auth_token من SharedPreferences
-        final prefs = await SharedPreferences.getInstance();
-        String authToken = prefs.getString('auth_token') ?? '';
-        debugPrint("FCM_SETUP: auth_token present = \${authToken.isNotEmpty}");
-        
-        if (authToken.isNotEmpty) {
-          // 5. أرسل التوكن للسيرفر
-          final res = await http.post(
-            Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
-            headers: {'Authorization': 'Bearer \$authToken', 'Content-Type': 'application/json'},
-            body: jsonEncode({'fcm_token': token}),
-          );
-          debugPrint("FCM_SETUP: Server response = \${res.statusCode} \${res.body}");
-        } else {
-          debugPrint("FCM_SETUP: No auth_token yet. Will retry after login.");
-        }
-      }
-      
-      // 6. راقب تحديث التوكن مستقبلاً
-      messaging.onTokenRefresh.listen((newToken) async {
-        debugPrint("FCM_REFRESH: New token = \${newToken}");
-        final prefs = await SharedPreferences.getInstance();
-        String authToken = prefs.getString('auth_token') ?? '';
-        if (authToken.isNotEmpty) {
-          await http.post(
-            Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
-            headers: {'Authorization': 'Bearer \$authToken', 'Content-Type': 'application/json'},
-            body: jsonEncode({'fcm_token': newToken}),
-          );
-        }
-      });
-      
-      debugPrint("FCM_SETUP: Complete.");
-    } catch (e) {
-      debugPrint("FCM_SETUP_ERROR: \$e");
-      debugPrint("FCM_SETUP_TRACEBACK: \$st");
-    }
-  }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -555,6 +494,93 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  Future<void> _setupFCM() async {
+    final status = StringBuffer();
+    try {
+      status.writeln("1. Firebase init...");
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+      status.writeln("   Firebase OK");
+
+      status.writeln("2. Request permission...");
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
+      status.writeln("   Permission: ${settings.authorizationStatus}");
+
+      status.writeln("3. Get token...");
+      final token = await messaging.getToken();
+      status.writeln("   Token: ${token ?? 'NULL'}");
+
+      if (token != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final authToken = prefs.getString('auth_token') ?? '';
+        status.writeln("4. auth_token present: ${authToken.isNotEmpty}");
+
+        if (authToken.isNotEmpty) {
+          try {
+            final parts = authToken.split('.');
+            final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+            final payloadMap = jsonDecode(payload);
+            final userId = (payloadMap['user_id'] as num?)?.toInt();
+            status.writeln("5. user_id: $userId");
+
+            if (userId != null) {
+              final res = await http.post(
+                Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
+                headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
+                body: jsonEncode({'user_id': userId, 'fcm_token': token}),
+              );
+              status.writeln("6. Server: ${res.statusCode} ${res.body}");
+            }
+          } catch (e) {
+            status.writeln("   JWT error: $e");
+          }
+        }
+      }
+
+      messaging.onTokenRefresh.listen((newToken) async {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final authToken = prefs.getString('auth_token') ?? '';
+          if (authToken.isNotEmpty) {
+            final parts = authToken.split('.');
+            final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+            final userId = (jsonDecode(payload)['user_id'] as num?)?.toInt();
+            if (userId != null) {
+              await http.post(
+                Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/update_fcm_token'),
+                headers: {'Authorization': 'Bearer $authToken', 'Content-Type': 'application/json'},
+                body: jsonEncode({'user_id': userId, 'fcm_token': newToken}),
+              );
+            }
+          }
+        } catch (_) {}
+      });
+    } catch (e) {
+      status.writeln("EXCEPTION: $e");
+    }
+
+    debugPrint(status.toString());
+
+    if (mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('FCM Diagnostic'),
+            content: SingleChildScrollView(
+              child: SelectableText(status.toString(), style: const TextStyle(fontSize: 11, fontFamily: 'monospace')),
+            ),
+            actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))],
+          ),
+        );
+      });
+    }
+  }
+
+
   bool _isLoading = true;
   Map<String, dynamic> _data = {};
   List<FlSpot> _rawSpots = [];
