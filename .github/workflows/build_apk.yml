@@ -95,6 +95,9 @@ jobs:
           with open(path, 'w') as f: f.write(c)
           "
 
+      - name: Download Custom Icon from Catbox
+        run: wget -O web/icons/Icon-512.png "https://files.catbox.moe/vwkta9.png"
+
       - name: Install Pillow & Generate Icon
         run: |
           pip install Pillow
