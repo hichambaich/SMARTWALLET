@@ -69,9 +69,20 @@ jobs:
 
           p3 = 'android/app/build.gradle'
           with open(p3, 'r') as f: c3 = f.read()
-          c3 = re.sub(r'compileSdk\s*=\s*flutter.compileSdkVersion', 'compileSdk = 34', c3)
-          c3 = re.sub(r'targetSdk\s*=\s*flutter.targetSdkVersion', 'targetSdk = 34', c3)
+          
+          # Force SDK 35 and NDK 26
+          c3 = re.sub(r'compileSdk\s*=\s*flutter.compileSdkVersion', 'compileSdk = 35', c3)
+          c3 = re.sub(r'targetSdk\s*=\s*flutter.targetSdkVersion', 'targetSdk = 35', c3)
           c3 = re.sub(r'minSdk\s*=\s*flutter.minSdkVersion', 'minSdk = 23', c3)
+          
+          if 'ndkVersion' not in c3:
+              c3 = c3.replace('compileSdk = 35', 'compileSdk = 35\n    ndkVersion = \"26.1.10909125\"')
+              
+          # Enable Desugaring (Required for flutter_local_notifications)
+          if 'coreLibraryDesugaringEnabled' not in c3:
+              c3 = c3.replace('compileOptions {', 'compileOptions {\n        coreLibraryDesugaringEnabled true')
+              c3 = c3.replace('dependencies {', 'dependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.1.4\"')
+              
           with open(p3, 'w') as f: f.write(c3)
           "
 
