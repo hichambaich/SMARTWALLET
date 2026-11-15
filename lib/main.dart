@@ -7894,7 +7894,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     else
                       ..._history.map((sub) {
                         final plan = sub['plan_name'] ?? '?';
-                        final status = sub['computed_status'] ?? sub['status'] ?? '?';
+                        dynamic rawStatus = sub['computed_status'] ?? sub['status'] ?? '?';
+                        final status = rawStatus is Map 
+                            ? (rawStatus['effective_status'] ?? sub['status'] ?? '?').toString() 
+                            : rawStatus.toString();
                         final start = sub['start_date'] != null ? DateTime.fromMillisecondsSinceEpoch((sub['start_date'] * 1000).toInt()).toString().substring(0, 10) : 'N/A';
                         final end = sub['end_date'] != null ? DateTime.fromMillisecondsSinceEpoch((sub['end_date'] * 1000).toInt()).toString().substring(0, 10) : 'N/A';
                         return Container(
