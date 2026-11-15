@@ -80,8 +80,14 @@ jobs:
               
           # Enable Desugaring (Required for flutter_local_notifications)
           if 'coreLibraryDesugaringEnabled' not in c3:
-              c3 = c3.replace('compileOptions {', 'compileOptions {\n        coreLibraryDesugaringEnabled true')
-              c3 = c3.replace('dependencies {', 'dependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.1.4\"')
+              if 'compileOptions {' in c3:
+                  c3 = c3.replace('compileOptions {', 'compileOptions {\n        coreLibraryDesugaringEnabled true')
+              else:
+                  c3 = c3.replace('android {', 'android {\n    compileOptions {\n        coreLibraryDesugaringEnabled true\n    }')
+                  
+          # Add dependency directly at the end of the file to ensure it's present
+          if 'coreLibraryDesugaring ' not in c3:
+              c3 += '\ndependencies {\n    coreLibraryDesugaring \"com.android.tools:desugar_jdk_libs:2.1.4\"\n}\n'
               
           with open(p3, 'w') as f: f.write(c3)
           "
