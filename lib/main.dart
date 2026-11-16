@@ -43,8 +43,7 @@ void main() async {
   try {
     // تهيئة Firebase للأندرويد فقط لتجنب الشاشة البيضاء في الويب
     if (!kIsWeb) {
-      await Firebase.initializeApp();
-      // نستدعي دالة FCM بعد تهيئة Firebase (لكنها تحتاج SharedPreferences، لذا سننقلها لاحقاً)
+      await FirebaseService.initialize();
     }
     
     await AppTranslations.load();
