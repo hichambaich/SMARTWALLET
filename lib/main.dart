@@ -78,39 +78,37 @@ class AppTranslations {
   }
 
   static String t(String key) {
-    final lang = languageNotifier.value;
-    final map = lang == 'ar' ? _ar : (lang == 'fr' ? _fr : _en);
-    final parts = key.split('.');
-    dynamic current = map;
-    for (final part in parts) {
-      if (current is Map && current.containsKey(part)) {
-        current = current[part];
-      } else {
-        return key; // Fallback to key
-      }
+  final lang = languageNotifier.value;
+  final map = lang == 'ar' ? _ar : (lang == 'fr' ? _fr : _en);
+  final parts = key.split('.');
+  
+  // المحاولة 1: البحث المتداخل (Nested)
+  dynamic current = map;
+  bool foundNested = true;
+  for (final part in parts) {
+    if (current is Map && current.containsKey(part)) {
+      current = current[part];
+    } else {
+      foundNested = false;
+      break;
     }
-    if (current is Map) {
-      return (current['other'] ?? key).toString();
-    }
-    return current.toString();
+  }
+  if (foundNested && current is String) return current;
+
+  // المحاولة 2: البحث بالمسطحة مع Underscore (مثال: menu.title تصبح menu_title)
+  final underscoreKey = parts.join('_');
+  if (map is Map && map.containsKey(underscoreKey)) {
+    return map[underscoreKey].toString();
   }
 
-  static String _pluralForm(num count, String lang) {
-    final n = count.abs();
-    if (lang == 'ar') {
-      if (n == 0) return 'zero';
-      if (n == 1) return 'one';
-      if (n == 2) return 'two';
-      final rem = n % 100;
-      if (rem >= 3 && rem <= 10) return 'few';
-      if (rem >= 11 && rem <= 99) return 'many';
-      return 'other';
-    } else if (lang == 'fr') {
-      return n == 0 || n == 1 ? 'one' : 'other';
-    } else {
-      return n == 1 ? 'one' : 'other';
-    }
+  // المحاولة 3: البحث بالكلمة الأخيرة فقط (مثال: dash.exchange_balances تصبح exchange_balances)
+  final lastPart = parts.last;
+  if (map is Map && map.containsKey(lastPart)) {
+    return map[lastPart].toString();
   }
+
+  return key; // إذا فشل كل شيء، نعرض المفتاح
+}
 
   static String plural(String key, num count) {
     final lang = languageNotifier.value;
