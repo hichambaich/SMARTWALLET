@@ -201,7 +201,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildInput(Color cardBg, Color textColor, Color accent) {
     return SafeArea(
       child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
         child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(color: cardBg, border: Border(top: BorderSide(color: textColor.withOpacity(0.1)))),
