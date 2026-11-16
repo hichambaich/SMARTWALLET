@@ -97,13 +97,13 @@ class AppTranslations {
 
   // المحاولة 2: البحث بالمسطحة مع Underscore (مثال: menu.title تصبح menu_title)
   final underscoreKey = parts.join('_');
-  if (map is Map && map.containsKey(underscoreKey)) {
+  if (map.containsKey(underscoreKey)) {
     return map[underscoreKey].toString();
   }
 
   // المحاولة 3: البحث بالكلمة الأخيرة فقط (مثال: dash.exchange_balances تصبح exchange_balances)
   final lastPart = parts.last;
-  if (map is Map && map.containsKey(lastPart)) {
+  if (map.containsKey(lastPart)) {
     return map[lastPart].toString();
   }
 
@@ -125,6 +125,24 @@ class AppTranslations {
     if (current is! Map) return key;
     final form = _pluralForm(count, lang);
     return (current[form] ?? current['other'] ?? key).toString();
+  }
+
+  /// دالة مساعدة لتحديد صيغة الجمع بناءً على اللغة والعدد
+  static String _pluralForm(num count, String lang) {
+    if (lang == 'ar') {
+      if (count == 0) return 'zero';
+      if (count == 1) return 'one';
+      if (count == 2) return 'two';
+      if (count % 100 >= 3 && count % 100 <= 10) return 'few';
+      if (count % 100 >= 11 && count % 100 <= 99) return 'many';
+      return 'other';
+    } else if (lang == 'fr') {
+      if (count == 0 || count == 1) return 'one';
+      return 'other';
+    } else {
+      if (count == 1) return 'one';
+      return 'other';
+    }
   }
 }
 
