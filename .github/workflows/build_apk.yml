@@ -113,7 +113,7 @@ jobs:
           "
 
       - name: Download Custom Icon from Catbox
-        run: wget -O web/icons/Icon-512.png "https://files.catbox.moe/ztmbem.png"
+        run: wget -O web/icons/Icon-512.png "https://files.catbox.moe/9iub50.png"
 
       - name: Setup Launcher Icons
         run: |
