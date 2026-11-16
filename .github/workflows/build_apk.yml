@@ -166,6 +166,12 @@ jobs:
               else:
                   content += '\n\ndependencies {\n    coreLibraryDesugaring \'com.android.tools:desugar_jdk_libs:2.1.4\'\n}\n'
           
+          # إجبار استخدام debug keys بدلاً من release signing
+          content = re.sub(r'signingConfigs\s*\{.*?\n    \}', '', content, flags=re.DOTALL)
+          content = re.sub(r'signingConfig\s*=?\s*signingConfigs\.release', 'signingConfig signingConfigs.debug', content)
+          if 'signingConfig signingConfigs.debug' not in content and 'signingConfig = signingConfigs.debug' not in content:
+              content = content.replace('release {', 'release {\n            signingConfig signingConfigs.debug')
+
           with open(path, 'w') as f:
               f.write(content)
           print('DONE: compileSdk=35, ndkVersion=26.1.10909125, desugar=2.1.4')
@@ -176,19 +182,6 @@ jobs:
 
       - name: Clean Build
         run: flutter clean
-
-      - name: Decode Keystore
-        if: env.ANDROID_KEYSTORE_BASE64 != ''
-        run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload-keystore.jks
-
-      - name: Create key.properties
-        if: env.ANDROID_KEYSTORE_BASE64 != ''
-        run: |
-          echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > android/key.properties
-          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
-          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
-          echo "storeFile=upload-keystore.jks" >> android/key.properties
 
       - name: Build Release APK
         run: flutter build apk --release
