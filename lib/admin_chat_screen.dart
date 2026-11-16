@@ -238,7 +238,7 @@ class _AdminChatDetailScreenState extends State<AdminChatDetailScreen> {
                       ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
             decoration: BoxDecoration(color: cardBg, border: Border(top: BorderSide(color: textColor.withOpacity(0.1)))),
             child: Row(
               children: [
