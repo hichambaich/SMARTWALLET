@@ -43,7 +43,7 @@ void main() async {
   try {
     // تهيئة Firebase للأندرويد فقط لتجنب الشاشة البيضاء في الويب
     if (!kIsWeb) {
-      await FirebaseService.initialize();
+      FirebaseService.initialize(); // Non-blocking background task
     }
     
     await AppTranslations.load();
