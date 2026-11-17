@@ -991,15 +991,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     height: 50,
                                     child: _rawSpots.isEmpty
                                         ? Center(child: Text(AppTranslations.t('misc.loading'), style: const TextStyle(color: Colors.grey, fontSize: 10)))
-                                        : Stack(
-                                            children: [
-                                              Positioned.fill(top: 25, child: CustomPaint(painter: DashedLinePainter(color: Colors.grey.withOpacity(0.4)))),
-                                              LineChart(
+                                        : LineChart(
                                                 LineChartData(
                                                   clipData: const FlClipData.all(),
                                                   gridData: const FlGridData(show: false),
                                                   titlesData: const FlTitlesData(show: false),
-                                                  borderData: FlBorderData(show: false),
+                                                  borderData: FlBorderData(
+                                                    show: true,
+                                                    border: const Border(
+                                                      bottom: BorderSide(color: Color(0xFF2d3a52), width: 1),
+                                                    ),
+                                                  ),
+                                                  extraLinesData: ExtraLinesData(
+                                                    horizontalLines: [
+                                                      HorizontalLine(
+                                                        y: _maxY,
+                                                        color: Colors.grey,
+                                                        strokeWidth: 1,
+                                                        dashArray: [3, 3],
+                                                      ),
+                                                    ],
+                                                  ),
                                                   minX: 0,
                                                   maxX: (_rawSpots.length - 1).toDouble() > 0 ? (_rawSpots.length - 1).toDouble() : 1,
                                                   minY: _minY,
@@ -1014,18 +1026,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       dotData: const FlDotData(show: false),
                                                       belowBarData: BarAreaData(show: false),
                                                     ),
-                                                      LineChartBarData(
-                                                        isCurved: true,
-                                                        color: accent,
-                                                        barWidth: 1,
-                                                        dotData: const FlDotData(show: false),
-                                                        dashArray: [4, 3],
-                                                      ),
+                                                      
                                                   ],
                                                 ),
                                               ),
-                                            ],
-                                          ),
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
@@ -2979,33 +2983,52 @@ class _StatsScreenState extends State<StatsScreen> {
                   Expanded(
                     child: _rawSpots.isEmpty
                         ? Center(child: Text(AppTranslations.t('misc.no_chart_data'), style: const TextStyle(color: Colors.grey, fontSize: 11)))
-                        : LineChart(
-                            LineChartData(
-                              gridData: FlGridData(
-                                show: true,
-                                drawVerticalLine: false,
-                                getDrawingHorizontalLine: (value) => const FlLine(
-                                  color: Color(0xFF2d3a52),
-                                  strokeWidth: 1,
-                                  dashArray: [3, 3],
-                                ),
-                              ),
-                              titlesData: const FlTitlesData(show: false),
-                              borderData: FlBorderData(show: false),
-                              minX: 0,
-                              maxX: (_rawSpots.length - 1).toDouble() > 0 ? (_rawSpots.length - 1).toDouble() : 1,
-                              lineBarsData: [
-                                LineChartBarData(
-                                  spots: _rawSpots,
-                                  isCurved: true,
-                                  color: _changePct >= 0 ? green : red,
-                                  barWidth: 2,
-                                  dotData: const FlDotData(show: false),
-                                ),
-
-                              ],
+                        : Builder(
+                              builder: (context) {
+                                double minY = _rawSpots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
+                                double maxY = _rawSpots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+                                double padding = (maxY - minY) * 0.1;
+                                if (padding == 0) padding = 1;
+                                
+                                return LineChart(
+                                  LineChartData(
+                                    
+                                  minY: minY - padding,
+                                  maxY: maxY + padding,
+                                  gridData: const FlGridData(show: false),
+                                  titlesData: const FlTitlesData(show: false),
+                                  borderData: FlBorderData(
+                                    show: true,
+                                    border: const Border(
+                                      bottom: BorderSide(color: Color(0xFF2d3a52), width: 1),
+                                    ),
+                                  ),
+                                  extraLinesData: ExtraLinesData(
+                                    horizontalLines: [
+                                      HorizontalLine(
+                                        y: maxY,
+                                        color: const Color(0xFF2d3a52),
+                                        strokeWidth: 1,
+                                        dashArray: [3, 3],
+                                      ),
+                                    ],
+                                  ),
+                                  minX: 0,
+                                  maxX: (_rawSpots.length - 1).toDouble() > 0 ? (_rawSpots.length - 1).toDouble() : 1,
+                                  lineBarsData: [
+                                    LineChartBarData(
+                                      spots: _rawSpots,
+                                      isCurved: true,
+                                      color: _changePct >= 0 ? green : red,
+                                      barWidth: 2,
+                                      dotData: const FlDotData(show: false),
+                                    ),
+                                  ],
+                                
+                                  ),
+                                );
+                              }
                             ),
-                          ),
                   ),
                   if (_chartLabels.isNotEmpty) ...[
                     const SizedBox(height: 4),
