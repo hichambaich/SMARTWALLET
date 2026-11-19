@@ -194,6 +194,214 @@ String translateLifecycle(String action) {
 
 
 
+
+Future<void> showManualSellDialog(BuildContext context, String symbol) async {
+  final TextEditingController pwdCtrl = TextEditingController();
+  bool isLoading = false;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF0F172A),
+          title: Text(
+            symbol == "ALL" ? AppTranslations.t('trade.sell_all_title') : AppTranslations.t('trade.sell_single_title').replaceAll('{symbol}', symbol),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                symbol == "ALL" 
+                  ? AppTranslations.t('trade.sell_all_confirm')
+                  : AppTranslations.t('trade.sell_single_confirm'),
+                style: const TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: pwdCtrl,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: AppTranslations.t('trade.sell_pwd_hint'),
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text(AppTranslations.t('trade.sell_cancel'), style: const TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: isLoading ? null : () async {
+                if (pwdCtrl.text.isEmpty) return;
+                setDialogState(() => isLoading = true);
+
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('token') ?? '';
+                  
+                  final res = await http.post(
+                    Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/manual_sell'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: jsonEncode({'symbol': symbol, 'password': pwdCtrl.text}),
+                  );
+
+                  if (res.statusCode == 200) {
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(AppTranslations.t('trade.sell_success')), backgroundColor: Colors.green),
+                      );
+                    }
+                  } else {
+                    final err = jsonDecode(res.body);
+                    setDialogState(() => isLoading = false);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(AppTranslations.t('trade.sell_error').replaceAll('{error}', err['detail'] ?? 'Error')), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  setDialogState(() => isLoading = false);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(AppTranslations.t('trade.sell_conn_error').replaceAll('{error}', e.toString())), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              child: isLoading 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : Text(AppTranslations.t('trade.sell_confirm_btn'), style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      }
+    ),
+  );
+}
+
+
+Future<void> showManualBuyDialog(BuildContext context, String symbol) async {
+  final amountCtrl = TextEditingController();
+  final pwdCtrl = TextEditingController();
+  bool isLoading = false;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF0F172A),
+          title: Text(
+            AppTranslations.t('trade.buy_title').replaceAll('{symbol}', symbol),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: AppTranslations.t('trade.buy_amount_hint'),
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: pwdCtrl,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: AppTranslations.t('trade.buy_pwd_hint'),
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: const Color(0xFF1E293B),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text(AppTranslations.t('trade.sell_cancel'), style: const TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: isLoading ? null : () async {
+                final amount = double.tryParse(amountCtrl.text);
+                if (amount == null || amount <= 0 || pwdCtrl.text.isEmpty) return;
+                setDialogState(() => isLoading = true);
+
+                try {
+                  final prefs = await SharedPreferences.getInstance();
+                  final token = prefs.getString('token') ?? '';
+                  
+                  final res = await http.post(
+                    Uri.parse('https://ubuntu-4gb-hel1-2.tail7f4de4.ts.net:10000/api/manual_buy'),
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': 'Bearer $token',
+                    },
+                    body: jsonEncode({'symbol': symbol, 'amount': amount, 'password': pwdCtrl.text}),
+                  );
+
+                  if (res.statusCode == 200) {
+                    if (context.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(AppTranslations.t('trade.buy_success')), backgroundColor: Colors.green),
+                      );
+                    }
+                  } else {
+                    final err = jsonDecode(res.body);
+                    setDialogState(() => isLoading = false);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(AppTranslations.t('trade.sell_error').replaceAll('{error}', err['detail'] ?? 'Error')), backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  setDialogState(() => isLoading = false);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(AppTranslations.t('trade.sell_conn_error').replaceAll('{error}', e.toString())), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+              child: isLoading 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : Text(AppTranslations.t('trade.buy_confirm_btn'), style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      }
+    ),
+  );
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -1280,6 +1488,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(AppTranslations.t('dash.positions'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)))),
                         const SizedBox(width: 5),
                         Text('${positions.length}/${_data['max_positions'] ?? 7}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)))),
+                        if (positions.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => showManualSellDialog(context, "ALL"),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.shopping_cart_outlined, color: Colors.red, size: 14),
+                                const SizedBox(width: 4),
+                                Text(AppTranslations.t('trade.sell_all'), style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ],
                       ]),
                       Row(children: [
                         const Icon(Icons.list_alt, size: 13, color: Colors.grey),
@@ -1696,6 +1918,13 @@ class _ExpandablePositionCardState extends State<ExpandablePositionCard> {
                 const SizedBox(width: 9),
                 Text(sym, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: (themeNotifier.value == ThemeMode.dark ? Colors.white : const Color(0xFF0f172a)))),
                 const Spacer(),
+                IconButton(
+                  onPressed: () => showManualSellDialog(context, sym),
+                  icon: const Icon(Icons.shopping_cart_outlined, color: Colors.red, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 18,
+                ),
                 InkWell(
                   onTap: () async {
                     final url = 'https://www.binance.com/en/trade/${sym.split('/')[0]}_USDT?type=spot';
@@ -1707,10 +1936,7 @@ class _ExpandablePositionCardState extends State<ExpandablePositionCard> {
                     children: [
                       Icon(Icons.link, color: widget.accent, size: 14),
                       const SizedBox(width: 4),
-                      Text(
-                        AppTranslations.t('pos.open_binance').replaceAll('{symbol}', sym.split('/')[0]), 
-                        style: TextStyle(fontSize: 13, color: widget.accent),
-                      ),
+                      Text(AppTranslations.t('trade.open_binance'), style: TextStyle(fontSize: 13, color: widget.accent)),
                     ],
                   ),
                 ),
@@ -9032,10 +9258,20 @@ class _PermanentAssetsScreenState extends State<PermanentAssetsScreen> {
                                   Expanded(
                                     child: Text(sym, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14)),
                                   ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Color(0xFFef4444), size: 20),
-                                    onPressed: _isBusy ? null : () => _remove(sym),
-                                    tooltip: 'Remove',
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.shopping_cart_outlined, color: Color(0xFF10b981), size: 20),
+                                        onPressed: _isBusy ? null : () => showManualBuyDialog(context, sym),
+                                        tooltip: 'Buy',
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline, color: Color(0xFFef4444), size: 20),
+                                        onPressed: _isBusy ? null : () => _remove(sym),
+                                        tooltip: 'Remove',
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
