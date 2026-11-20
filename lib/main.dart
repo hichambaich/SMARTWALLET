@@ -2593,7 +2593,7 @@ class _StatDetailScreenState extends State<StatDetailScreen> {
       builder: (ctx) {
         final isDark = themeNotifier.value == ThemeMode.dark;
         return Container(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(ctx).padding.bottom),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF101722) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -7323,7 +7323,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       builder: (ctx) {
         final isDark = themeNotifier.value == ThemeMode.dark;
         return Container(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(ctx).padding.bottom),
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF101722) : Colors.white,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
