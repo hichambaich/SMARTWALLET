@@ -2589,17 +2589,13 @@ class _StatDetailScreenState extends State<StatDetailScreen> {
   void _showPeriodPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: (themeNotifier.value == ThemeMode.dark ? const Color(0xFF101722) : Colors.white),
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
         final isDark = themeNotifier.value == ThemeMode.dark;
-        return SafeArea(
-          top: false,
-          child: Container(
+        return Padding(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF101722) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -2647,7 +2643,6 @@ class _StatDetailScreenState extends State<StatDetailScreen> {
               const SizedBox(height: 20),
             ],
           ),
-        ),
         );
       },
     );
