@@ -198,9 +198,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: SMARTWALLET v1.0.0
-          body: "تحديث جديد للتطبيق."
+          tag_name: v1.0.1
+          name: SMARTWALLET v1.0.1
+          body: "تحديث تجريبي لميزة التحديث التلقائي."
           files: build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
