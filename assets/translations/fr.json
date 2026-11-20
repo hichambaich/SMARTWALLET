@@ -526,7 +526,13 @@
     "period_1mo": "1M",
     "period_1y": "1A",
     "loading": "Chargement...",
-    "stop": "Arrêter"
+    "stop": "Arrêter",
+    "app_update_title": "Mise à jour disponible 🚀",
+    "app_update_message": "Une nouvelle version est disponible.",
+    "app_update_now": "Mettre à jour",
+    "app_update_later": "Plus tard",
+    "app_current_version": "Votre version",
+    "app_new_version": "Nouvelle version"
   },
   "common": {
     "cancel": "Annuler",

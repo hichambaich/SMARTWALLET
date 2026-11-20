@@ -17,6 +17,7 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -823,8 +824,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final String bnbLogoUrl = "https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/bnb.png";
 
+  Future<void> _checkForAppUpdate() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+      
+      final res = await http.get(Uri.parse('https://api.github.com/repos/hichambaich/SMARTWALLET/releases/latest'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final latestTag = data['tag_name'] as String;
+        final latestVersion = latestTag.replaceAll('v', '');
+        final releaseNotes = data['body'] as String? ?? '';
+        
+        String downloadUrl = data['html_url'];
+        
+        final assets = data['assets'] as List;
+        for (var asset in assets) {
+          if (asset['name'].toString().endsWith('.apk')) {
+            downloadUrl = asset['browser_download_url'];
+            break;
+          }
+        }
+        
+        if (_isVersionNewer(currentVersion, latestVersion)) {
+          if (!mounted) return;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF0F172A),
+              title: Row(
+                children: [
+                  const Icon(Icons.system_update, color: Colors.green),
+                  const SizedBox(width: 8),
+                  Text(AppTranslations.t('misc.app_update_title'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(AppTranslations.t('misc.app_update_message'), style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 12),
+                  Text("${AppTranslations.t('misc.app_current_version')}: $currentVersion", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text("${AppTranslations.t('misc.app_new_version')}: $latestVersion", style: const TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                  if (releaseNotes.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Divider(color: Colors.white24),
+                    Text(releaseNotes, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+                  ]
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(AppTranslations.t('misc.app_update_later'), style: const TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  onPressed: () async {
+                    final ok = await openUrl(downloadUrl);
+                    if (!ok && ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Could not open link'), backgroundColor: Colors.red));
+                    }
+                  },
+                  child: Text(AppTranslations.t('misc.app_update_now'), style: const TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint("Update check failed: $e");
+    }
+  }
+
+  bool _isVersionNewer(String current, String latest) {
+    try {
+      List<int> c = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      List<int> l = latest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      for (int i = 0; i < 3; i++) {
+        int cv = i < c.length ? c[i] : 0;
+        int lv = i < l.length ? l[i] : 0;
+        if (lv > cv) return true;
+        if (lv < cv) return false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   @override
   void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForAppUpdate());
+
     super.initState();
     _setupFCM();
     _fetchData();

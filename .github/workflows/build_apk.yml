@@ -191,3 +191,13 @@ jobs:
         with:
           name: SMARTWALLET-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: SMARTWALLET v1.0.0
+          body: "تحديث جديد للتطبيق."
+          files: build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

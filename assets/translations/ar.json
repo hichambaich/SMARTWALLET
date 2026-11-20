@@ -526,7 +526,13 @@
     "period_1mo": "شهر",
     "period_1y": "سنة",
     "loading": "جاري التحميل...",
-    "stop": "إيقاف"
+    "stop": "إيقاف",
+    "app_update_title": "تحديث متاح 🚀",
+    "app_update_message": "نسخة جديدة من التطبيق متاحة الآن.",
+    "app_update_now": "تحديث الآن",
+    "app_update_later": "لاحقاً",
+    "app_current_version": "إصدارك الحالي",
+    "app_new_version": "الإصدار الجديد"
   },
   "common": {
     "cancel": "إلغاء",

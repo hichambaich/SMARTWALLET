@@ -526,7 +526,13 @@
     "period_1mo": "1MO",
     "period_1y": "1Y",
     "loading": "Loading...",
-    "stop": "Stop"
+    "stop": "Stop",
+    "app_update_title": "Update Available 🚀",
+    "app_update_message": "A new version is available.",
+    "app_update_now": "Update Now",
+    "app_update_later": "Later",
+    "app_current_version": "Your version",
+    "app_new_version": "New version"
   },
   "common": {
     "cancel": "Cancel",
